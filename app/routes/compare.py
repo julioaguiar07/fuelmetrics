@@ -16,6 +16,8 @@ def get_processor():
     from app.routes.today import get_processor as get_global_processor
     return get_global_processor()
 
+# No método compare_cities, atualize após obter o processor:
+
 @router.get("/cities", response_model=List[CityComparison])
 async def compare_cities(
     cities: str = Query(..., description="Lista de cidades separadas por vírgula"),
@@ -35,8 +37,17 @@ async def compare_cities(
         processor = get_processor()
         df = processor.df
         
+        # USAR DADOS RECENTES - ADICIONE ESTA LINHA
+        from app.utils.column_helper import get_latest_data
+        df = get_latest_data(df)
+        
         # Usar helper para mapeamento correto
         col_map = get_column_mapping(df)
+        
+        # VERIFICAÇÃO CRÍTICA: Log das colunas mapeadas
+        logger.info(f"DEBUG - Comparando cidades: {city_list}")
+        logger.info(f"DEBUG - Colunas mapeadas: {col_map}")
+        logger.info(f"DEBUG - Valores únicos em {col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')}: {df[col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')].unique()[:10]}")
         
         comparisons = []
         
@@ -50,38 +61,47 @@ async def compare_cities(
             ]
             
             if city_data.empty:
-                logger.warning(f"Cidade não encontrada: {city}")
+                logger.warning(f"Cidade não encontrada: {city} (normalizado: {city_normalized})")
                 continue
             
-            # Filtrar por tipo de combustível
+            # Filtrar por tipo de combustível CONSOLIDADO
             fuel_type_normalized = fuel_type.value.upper()
+            
+            # Verificar qual coluna de produto usar
+            produto_col = col_map.get('produto_consolidado', col_map.get('produto', 'PRODUTO_CONSOLIDADO'))
+            
             fuel_data = city_data[
-                city_data[col_map['produto_consolidado']].astype(str).str.upper() == fuel_type_normalized
+                city_data[produto_col].astype(str).str.upper() == fuel_type_normalized
             ]
             
-            if fuel_data.empty:
-                # Tentar variações de diesel
-                if fuel_type.value == 'diesel_s10':
-                    fuel_data = city_data[city_data[col_map['produto_consolidado']].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
-                elif fuel_type.value == 'diesel':
-                    fuel_data = city_data[city_data[col_map['produto_consolidado']].astype(str).str.contains('DIESEL', case=False, na=False)]
+            # Se vazio, tentar variações para diesel
+            if fuel_data.empty and fuel_type.value in ['diesel', 'diesel_s10']:
+                if fuel_type.value == 'diesel':
+                    fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL', case=False, na=False)]
+                elif fuel_type.value == 'diesel_s10':
+                    fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
             
             if fuel_data.empty:
                 logger.warning(f"Nenhum dado de {fuel_type.value} para {city}")
+                logger.warning(f"Valores disponíveis: {city_data[produto_col].unique()}")
                 continue
             
-            # Calcular estatísticas
+            # Calcular estatísticas APENAS COM DADOS RECENTES
             avg_price = float(fuel_data[col_map['preco_medio_revenda']].mean())
             min_price = float(fuel_data[col_map['preco_medio_revenda']].min())
             max_price = float(fuel_data[col_map['preco_medio_revenda']].max())
             total_stations = int(fuel_data[col_map['numero_de_postos_pesquisados']].sum())
             
+            # Log para debug
+            logger.info(f"DEBUG - {city}: {len(fuel_data)} registros, preço médio: {avg_price}")
+            
             fuels_data = {
                 fuel_type.value: {
-                    'avg': avg_price,
-                    'min': min_price,
-                    'max': max_price,
-                    'stations': total_stations
+                    'avg': round(avg_price, 3),
+                    'min': round(min_price, 3),
+                    'max': round(max_price, 3),
+                    'stations': total_stations,
+                    'std': float(fuel_data[col_map['preco_medio_revenda']].std())
                 }
             }
             
