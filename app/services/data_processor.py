@@ -76,10 +76,9 @@ class DataProcessor:
             self.df['ESTADO'] = self.df['ESTADO'].astype(str).str.upper().str.strip()
             self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.upper().str.strip()
             
-            # Normalizar REGIAO - corrigir "CENTRO OESTE" para "CENTRO_OESTE"
+            # Normalizar REGIAO
             if 'REGIAO' in self.df.columns:
                 self.df['REGIAO'] = self.df['REGIAO'].astype(str).str.upper().str.strip()
-                # Corrigir todas as variações para "CENTRO_OESTE" (COM UNDERLINE)
                 self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO_OESTE')
                 self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO_OESTE')
                 self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO-OESTE', 'CENTRO_OESTE')
@@ -145,30 +144,7 @@ class DataProcessor:
             
             self.df['REGIAO'] = self.df['ESTADO_SIGLA'].apply(get_region_from_state_sigla)
             
-            # Se já tínhamos REGIAO do arquivo, priorizar ela (mas garantir formatação)
-            if 'REGIAO' in self.df.columns:
-                # Corrigir qualquer inconsistência
-                self.df['REGIAO'] = self.df['REGIAO'].str.upper().str.strip()
-                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO-OESTE')
-                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO-OESTE')
-            
-            # Verificar se há regiões não identificadas
-            regioes_nao_id = self.df[self.df['REGIAO'] == 'NÃO IDENTIFICADA']
-            if len(regioes_nao_id) > 0:
-                logger.warning(f"Regiões não identificadas para {len(regioes_nao_id)} registros")
-                logger.warning(f"Estados problemáticos: {regioes_nao_id['ESTADO'].unique()}")
-            
             # Filtrar produtos relevantes
-            valid_products = [
-                'GASOLINA', 'GASOLINA COMUM', 'GASOLINA ADITIVADA',
-                'ÓLEO DIESEL', 'OLEO DIESEL', 'DIESEL',  # Diferentes formas
-                'ÓLEO DIESEL S10', 'OLEO DIESEL S10', 'DIESEL S10',
-                'DIESEL S500', 
-                'GNV', 'GÁS NATURAL VEICULAR', 'GAS NATURAL VEICULAR',
-                'ETANOL', 'ETANOL HIDRATADO', 'ALCOOL', 'ÁLCOOL'
-            ]
-            
-            # Usar contains para capturar variações
             def is_valid_product(product):
                 if not isinstance(product, str):
                     return False
@@ -177,8 +153,7 @@ class DataProcessor:
             
             self.df = self.df[self.df['PRODUTO'].apply(is_valid_product)]
             
-            # E depois, substitua o product_mapping:
-            
+            # Consolidar tipos similares
             product_mapping = {
                 'GASOLINA': 'GASOLINA',
                 'GASOLINA COMUM': 'GASOLINA', 
@@ -205,19 +180,12 @@ class DataProcessor:
             )
             
             # Log para debug
-            unique_products = self.df['PRODUTO'].unique()
-            unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
-            logger.info(f"Produtos originais: {list(unique_products)[:10]}")
-            logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
-            )
-            # Log para debug
             logger.info(f"DEBUG - Colunas após processamento: {list(self.df.columns)}")
             logger.info(f"DEBUG - Tipos das colunas: {self.df.dtypes.to_dict()}")
             logger.info(f"DEBUG - Primeiras linhas:")
             for i in range(min(3, len(self.df))):
                 logger.info(f"  Linha {i}: PRODUTO={self.df.iloc[i]['PRODUTO']}, PRODUTO_CONSOLIDADO={self.df.iloc[i]['PRODUTO_CONSOLIDADO']}")
                 
-            # Log para debug
             unique_products = self.df['PRODUTO'].unique()
             unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
             logger.info(f"Produtos originais: {list(unique_products)}")
