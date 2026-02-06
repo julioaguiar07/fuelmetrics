@@ -138,27 +138,45 @@ async def get_today_summary(
                 detail=f"Nenhum dado encontrado para {fuel_type.value}"
             )
         
-        # Pior preço - CORREÇÃO DO ERRO 'preco_medio_revenda'
-        # DEBUG: Verificar colunas disponíveis
+        # DEBUG detalhado
         logger.info(f"DEBUG - Colunas disponíveis: {list(processor.df.columns)}")
         
-        # O data_processor converte para minúsculas, então usamos minúsculas
-        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
+        # Verificar qual coluna de produto usar (MAIÚSCULAS vs minúsculas)
+        product_column = None
+        possible_product_columns = ['PRODUTO_CONSOLIDADO', 'produto_consolidado', 'PRODUTO', 'produto']
+        
+        for col in possible_product_columns:
+            if col in processor.df.columns:
+                product_column = col
+                logger.info(f"DEBUG - Usando coluna de produto: {product_column}")
+                logger.info(f"DEBUG - Valores únicos: {processor.df[product_column].unique()[:5]}")
+                break
+        
+        if product_column is None:
+            logger.error(f"DEBUG - Coluna de produto não encontrada. Colunas: {list(processor.df.columns)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Erro: coluna de produto não encontrada"
+            )
+        
+        # Filtrar por tipo de combustível
+        fuel_df = processor.df[processor.df[product_column] == fuel_type.value.upper()]
         
         if fuel_df.empty:
+            logger.error(f"DEBUG - Nenhum dado para {fuel_type.value.upper()}")
+            logger.error(f"DEBUG - Valores disponíveis em {product_column}: {processor.df[product_column].unique()[:10]}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Nenhum dado encontrado para {fuel_type.value}"
             )
         
-        # VERIFICAÇÃO CRÍTICA: Encontrar o nome correto da coluna
+        # Encontrar coluna de preço (pode estar em MAIÚSCULAS ou minúsculas)
         price_column = None
-        possible_names = ['preco_medio_revenda', 'preco medio revenda', 
-                         'PRECO_MEDIO_REVENDA', 'PRECO MEDIO REVENDA']
+        possible_price_columns = ['PRECO_MEDIO_REVENDA', 'preco_medio_revenda', 'PRECO MEDIO REVENDA', 'preco medio revenda']
         
-        for name in possible_names:
-            if name in fuel_df.columns:
-                price_column = name
+        for col in possible_price_columns:
+            if col in fuel_df.columns:
+                price_column = col
                 logger.info(f"DEBUG - Usando coluna de preço: {price_column}")
                 break
         
@@ -169,20 +187,31 @@ async def get_today_summary(
                 detail="Erro na estrutura dos dados: coluna de preço não encontrada"
             )
         
-        # Agora usar a coluna correta
+        # Encontrar coluna de postos
+        stations_column = None
+        possible_stations_columns = ['NUMERO_DE_POSTOS_PESQUISADOS', 'numero_de_postos_pesquisados', 
+                                     'NUMERO DE POSTOS PESQUISADOS', 'numero de postos pesquisados']
+        
+        for col in possible_stations_columns:
+            if col in fuel_df.columns:
+                stations_column = col
+                logger.info(f"DEBUG - Usando coluna de postos: {stations_column}")
+                break
+        
+        if stations_column is None:
+            stations_column = 'NUMERO_DE_POSTOS_PESQUISADOS'  # Valor padrão
+            logger.warning(f"DEBUG - Coluna de postos não encontrada, usando padrão")
+        
+        # Agora usar as colunas corretas
         worst_idx = fuel_df[price_column].idxmax()
         worst_row = fuel_df.loc[worst_idx]
         
-        # Acessar outras colunas (também em minúsculas)
-        stations_column = 'numero_de_postos_pesquisados'
-        if stations_column not in fuel_df.columns:
-            stations_column = 'numero de postos pesquisados'  # Tentar alternativa
-        
+        # Acessar outras colunas
         worst_price = {
             'price': float(worst_row[price_column]),
-            'city': worst_row['municipio'],
-            'state': worst_row['estado'],
-            'region': worst_row['regiao'],
+            'city': str(worst_row.get('MUNICIPIO', worst_row.get('municipio', ''))),
+            'state': str(worst_row.get('ESTADO', worst_row.get('estado', ''))),
+            'region': str(worst_row.get('REGIAO', worst_row.get('regiao', ''))),
             'stations_count': int(worst_row.get(stations_column, 0))
         }
         
@@ -190,9 +219,9 @@ async def get_today_summary(
         potential_saving = worst_price['price'] - best_price['price']
         
         # Total de postos
-        total_stations = int(processor.df[stations_column].sum())
+        total_stations = int(processor.df[stations_column].sum() if stations_column in processor.df.columns else 0)
         
-        # Média nacional 
+        # Média nacional
         national_average = float(fuel_df[price_column].mean())
         
         # Ranking
@@ -211,7 +240,7 @@ async def get_today_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro em /summary: {e}")
+        logger.error(f"Erro em /summary: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @router.get("/stats")
