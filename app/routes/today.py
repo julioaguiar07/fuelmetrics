@@ -139,7 +139,11 @@ async def get_today_summary(
             )
         
         # Pior preço
-        fuel_df = processor.df[processor.df['PRODUTO_CONSOLIDADO'] == fuel_type.value.upper()]
+        # Verificar colunas disponíveis
+        logger.info(f"DEBUG - Colunas disponíveis: {list(processor.df.columns)}")
+        
+        # O data_processor converte para minúsculas, então usamos minúsculas
+        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
         
         if fuel_df.empty:
             raise HTTPException(
@@ -147,25 +151,43 @@ async def get_today_summary(
                 detail=f"Nenhum dado encontrado para {fuel_type.value}"
             )
         
-        worst_idx = fuel_df['preco_medio_revenda'].idxmax()
+        # VERIFICAÇÃO CRÍTICA: Encontrar o nome correto da coluna
+        price_column = None
+        possible_names = ['preco_medio_revenda', 'preco medio revenda', 
+                         'PRECO_MEDIO_REVENDA', 'PRECO MEDIO REVENDA']
+        
+        for name in possible_names:
+            if name in fuel_df.columns:
+                price_column = name
+                logger.info(f"DEBUG - Usando coluna de preço: {price_column}")
+                break
+        
+        if price_column is None:
+            logger.error(f"DEBUG - Coluna de preço não encontrada. Colunas: {list(fuel_df.columns)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Erro na estrutura dos dados: coluna de preço não encontrada"
+            )
+        
+        # Agora usar a coluna correta
+        worst_idx = fuel_df[price_column].idxmax()
         worst_row = fuel_df.loc[worst_idx]
         
+        # Acessar outras colunas (também em minúsculas)
+        stations_column = 'numero_de_postos_pesquisados'
+        if stations_column not in fuel_df.columns:
+            stations_column = 'numero de postos pesquisados'  # Tentar alternativa
+        
         worst_price = {
-            'price': float(worst_row['preco_medio_revenda']),
-            'city': worst_row['municipio'],
-            'state': worst_row['estado'],
-            'region': worst_row['regiao'],
-            'stations_count': int(worst_row['numero_de_postos_pesquisados'])
-        }
         
         # Economia potencial
         potential_saving = worst_price['price'] - best_price['price']
         
         # Total de postos
-        total_stations = int(processor.df['numero_de_postos_pesquisados'].sum())
+        total_stations = int(processor.df[stations_column].sum())
         
-        # Média nacional
-        national_average = float(fuel_df['preco_medio_revenda'].mean())
+        # Média nacional 
+        national_average = float(fuel_df[price_column].mean())
         
         # Ranking
         ranking = processor.get_ranking(fuel_type.value, 10)
@@ -197,7 +219,7 @@ async def get_general_stats():
             "total_records": len(df),
             "total_municipalities": df['municipio'].nunique(),
             "total_states": df['estado'].nunique(),
-            "total_fuel_types": df['PRODUTO_CONSOLIDADO'].nunique(),
+            "total_fuel_types": df['produto_consolidado'].nunique(),  # MINÚSCULO
             "data_coverage": {
                 "norte": len(df[df['regiao'] == 'NORTE']),
                 "nordeste": len(df[df['regiao'] == 'NORDESTE']),
@@ -241,7 +263,7 @@ async def search_cities(
         grouped = results.groupby(['municipio', 'estado', 'regiao']).agg({
             'preco_medio_revenda': 'mean',
             'numero_de_postos_pesquisados': 'sum',
-            'PRODUTO_CONSOLIDADO': lambda x: list(x.unique())
+            'produto_consolidado': lambda x: list(x.unique())  # MINÚSCULO
         }).reset_index()
         
         # Limitar resultados
@@ -254,7 +276,7 @@ async def search_cities(
                 'region': row['regiao'],
                 'avg_price': float(row['preco_medio_revenda']),
                 'stations': int(row['numero_de_postos_pesquisados']),
-                'available_fuels': row['PRODUTO_CONSOLIDADO']
+                'available_fuels': row['produto_consolidado']
             }
             for _, row in grouped.iterrows()
         ]
