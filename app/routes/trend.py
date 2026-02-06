@@ -27,6 +27,10 @@ async def analyze_trend(
         processor = get_processor()
         df = processor.df
         
+        # USAR DADOS RECENTES - ADICIONE ESTA LINHA
+        from app.utils.column_helper import get_latest_data
+        df = get_latest_data(df)
+        
         # Usar helper para mapeamento correto
         col_map = get_column_mapping(df)
         
