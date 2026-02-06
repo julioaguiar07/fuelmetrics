@@ -41,6 +41,30 @@ def get_processor():
     
     return _processor
 
+
+@router.get("/debug-raw")
+async def debug_raw_data():
+    """Endpoint para debug dos dados brutos"""
+    try:
+        _downloader = ANPDownloader()
+        df = _downloader.load_data()
+        
+        return {
+            "total_records": len(df),
+            "columns": list(df.columns),
+            "column_types": df.dtypes.astype(str).to_dict(),
+            "unique_products": df['PRODUTO'].unique().tolist() if 'PRODUTO' in df.columns else [],
+            "sample_products": df['PRODUTO'].head(20).tolist() if 'PRODUTO' in df.columns else [],
+            "has_diesel": 'OLEO DIESEL' in df['PRODUTO'].values if 'PRODUTO' in df.columns else False,
+            "has_diesel_s10": 'OLEO DIESEL S10' in df['PRODUTO'].values if 'PRODUTO' in df.columns else False,
+            "sample_data": df[['PRODUTO', 'MUNICIPIO', 'ESTADO', 'PRECO_MEDIO_REVENDA']].head(10).to_dict('records')
+        }
+    except Exception as e:
+        logger.error(f"Erro em /debug-raw: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.get("/best-price", response_model=BestPriceResponse)
 async def get_best_price(
     fuel_type: FuelType = Query(FuelType.GASOLINA, description="Tipo de combustível")
