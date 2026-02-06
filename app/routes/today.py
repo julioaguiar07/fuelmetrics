@@ -139,7 +139,7 @@ async def get_today_summary(
             )
         
         # Pior preço
-        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
+        fuel_df = processor.df[processor.df['PRODUTO_CONSOLIDADO'] == fuel_type.value.upper()]
         
         if fuel_df.empty:
             raise HTTPException(
@@ -197,7 +197,7 @@ async def get_general_stats():
             "total_records": len(df),
             "total_municipalities": df['municipio'].nunique(),
             "total_states": df['estado'].nunique(),
-            "total_fuel_types": df['produto_consolidado'].nunique(),
+            "total_fuel_types": df['PRODUTO_CONSOLIDADO'].nunique(),
             "data_coverage": {
                 "norte": len(df[df['regiao'] == 'NORTE']),
                 "nordeste": len(df[df['regiao'] == 'NORDESTE']),
@@ -241,7 +241,7 @@ async def search_cities(
         grouped = results.groupby(['municipio', 'estado', 'regiao']).agg({
             'preco_medio_revenda': 'mean',
             'numero_de_postos_pesquisados': 'sum',
-            'produto_consolidado': lambda x: list(x.unique())
+            'PRODUTO_CONSOLIDADO': lambda x: list(x.unique())
         }).reset_index()
         
         # Limitar resultados
@@ -254,7 +254,7 @@ async def search_cities(
                 'region': row['regiao'],
                 'avg_price': float(row['preco_medio_revenda']),
                 'stations': int(row['numero_de_postos_pesquisados']),
-                'available_fuels': row['produto_consolidado']
+                'available_fuels': row['PRODUTO_CONSOLIDADO']
             }
             for _, row in grouped.iterrows()
         ]
