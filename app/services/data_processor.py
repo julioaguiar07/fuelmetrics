@@ -79,7 +79,7 @@ class DataProcessor:
                 'GASOLINA': 'GASOLINA',
                 'GASOLINA COMUM': 'GASOLINA', 
                 'GASOLINA ADITIVADA': 'GASOLINA',
-                'ETANOL HIDRATADO': 'ETANOL',
+                'ETANOL HIDRATADO': 'ETANOL',  
                 'ETANOL': 'ETANOL',
                 'ÓLEO DIESEL': 'DIESEL',
                 'ÓLEO DIESEL S10': 'DIESEL_S10',
@@ -93,7 +93,13 @@ class DataProcessor:
             self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
                 lambda x: product_mapping.get(x, x)
             )
-            
+            # Log para debug
+            logger.info(f"DEBUG - Colunas após processamento: {list(self.df.columns)}")
+            logger.info(f"DEBUG - Tipos das colunas: {self.df.dtypes.to_dict()}")
+            logger.info(f"DEBUG - Primeiras linhas:")
+            for i in range(min(3, len(self.df))):
+                logger.info(f"  Linha {i}: PRODUTO={self.df.iloc[i]['PRODUTO']}, PRODUTO_CONSOLIDADO={self.df.iloc[i]['PRODUTO_CONSOLIDADO']}")
+                
             # Log para debug
             unique_products = self.df['PRODUTO'].unique()
             unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
