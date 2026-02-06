@@ -138,8 +138,8 @@ async def get_today_summary(
                 detail=f"Nenhum dado encontrado para {fuel_type.value}"
             )
         
-        # Pior preço
-        # Verificar colunas disponíveis
+        # Pior preço - CORREÇÃO DO ERRO 'preco_medio_revenda'
+        # DEBUG: Verificar colunas disponíveis
         logger.info(f"DEBUG - Colunas disponíveis: {list(processor.df.columns)}")
         
         # O data_processor converte para minúsculas, então usamos minúsculas
@@ -179,6 +179,12 @@ async def get_today_summary(
             stations_column = 'numero de postos pesquisados'  # Tentar alternativa
         
         worst_price = {
+            'price': float(worst_row[price_column]),
+            'city': worst_row['municipio'],
+            'state': worst_row['estado'],
+            'region': worst_row['regiao'],
+            'stations_count': int(worst_row.get(stations_column, 0))
+        }
         
         # Economia potencial
         potential_saving = worst_price['price'] - best_price['price']
