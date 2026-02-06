@@ -176,112 +176,169 @@ class ANPDownloader:
         except Exception as e:
             logger.error(f"Erro ao calcular hash: {e}")
             return ""
+
     
     def load_data(self):
-        """Carrega dados do Excel para DataFrame"""
-        filepath = self.download_file()
+    """Carrega dados do Excel para DataFrame"""
+    filepath = self.download_file()
+    
+    try:
+        logger.info(f"Lendo arquivo Excel: {filepath}")
         
-        try:
-            logger.info(f"Lendo arquivo Excel: {filepath}")
+        # Tentar detectar a aba correta
+        excel_file = pd.ExcelFile(filepath)
+        logger.info(f"Abas disponíveis: {excel_file.sheet_names}")
+        
+        # Geralmente a primeira aba contém os dados
+        sheet_name = excel_file.sheet_names[0]
+        logger.info(f"Usando aba: {sheet_name}")
+        
+        # Ler primeiras 20 linhas para encontrar cabeçalho
+        temp_df = pd.read_excel(filepath, sheet_name=sheet_name, header=None, nrows=30)
+        
+        # Procurar a linha que contém "MÊS" (cabeçalho real)
+        header_row = None
+        for i in range(len(temp_df)):
+            row_values = temp_df.iloc[i].astype(str).str.strip().str.upper().tolist()
+            # Procurar por "MÊS" ou "MUNICÍPIO"
+            if any('MÊS' in val or 'MUNICÍPIO' in val for val in row_values):
+                header_row = i
+                logger.info(f"Cabeçalho encontrado na linha: {header_row}")
+                logger.info(f"Valores: {row_values}")
+                break
+        
+        if header_row is None:
+            logger.warning("Cabeçalho não encontrado, usando linha 0")
+            header_row = 0
+        
+        # Ler dados a partir do cabeçalho encontrado
+        df = pd.read_excel(
+            filepath,
+            sheet_name=sheet_name,
+            header=header_row,
+            dtype={'PREÇO MÉDIO REVENDA': 'float64'}
+        )
+        
+        # Remover linhas completamente vazias
+        df = df.dropna(how='all')
+        
+        logger.info(f"Dados lidos: {len(df)} linhas, {len(df.columns)} colunas")
+        logger.info(f"Colunas originais: {list(df.columns)}")
+        
+        # Renomear colunas para formato consistente (mantendo sem acentos)
+        df.columns = df.columns.astype(str)
+        
+        # Primeiro, normalizar os nomes das colunas
+        def normalize_column_name(col):
+            if not isinstance(col, str):
+                col = str(col)
             
-            # Tentar detectar a aba correta
-            excel_file = pd.ExcelFile(filepath)
-            logger.info(f"Abas disponíveis: {excel_file.sheet_names}")
+            # Converter para maiúsculas e remover espaços extras
+            col = col.strip().upper()
             
-            # Geralmente a primeira aba contém os dados
-            sheet_name = excel_file.sheet_names[0]
-            logger.info(f"Usando aba: {sheet_name}")
+            # Remover acentos
+            col = col.replace('Ç', 'C').replace('Ã', 'A').replace('Õ', 'O')
+            col = col.replace('Á', 'A').replace('É', 'E').replace('Í', 'I')
+            col = col.replace('Ó', 'O').replace('Ú', 'U').replace('Â', 'A')
+            col = col.replace('Ê', 'E').replace('Î', 'I').replace('Ô', 'O')
+            col = col.replace('Û', 'U').replace('À', 'A').replace('È', 'E')
+            col = col.replace('Ì', 'I').replace('Ò', 'O').replace('Ù', 'U')
             
-            # Ler dados
-            # Primeiro, vamos descobrir onde começa os dados
-            temp_df = pd.read_excel(filepath, sheet_name=sheet_name, header=None, nrows=20)
+            # Substituir caracteres especiais
+            col = col.replace(' ', '_').replace('-', '_')
+            col = col.replace('(', '').replace(')', '').replace('/', '_')
             
-            # Encontrar a linha que contém "MÊS" (cabeçalho real)
-            header_row = None
-            for i in range(len(temp_df)):
-                row_values = temp_df.iloc[i].astype(str).str.strip().tolist()
-                if 'MÊS' in row_values:
-                    header_row = i
-                    break
+            # Remover múltiplos underscores
+            col = '_'.join([part for part in col.split('_') if part])
             
-            if header_row is None:
-                # Se não encontrar, tentar encontrar "MUNICÍPIO"
-                for i in range(len(temp_df)):
-                    row_values = temp_df.iloc[i].astype(str).str.strip().tolist()
-                    if 'MUNICÍPIO' in row_values:
-                        header_row = i
+            return col
+        
+        # Aplicar normalização a todas as colunas
+        df.columns = [normalize_column_name(col) for col in df.columns]
+        
+        logger.info(f"Colunas normalizadas: {list(df.columns)}")
+        
+        # Mapear nomes de colunas para o formato esperado pelo sistema
+        column_mapping = {
+            # Mapeamento direto baseado no arquivo Excel
+            'MES': 'DATA_INICIAL',  # Ajuste: usar MÊS como DATA_INICIAL
+            'PRODUTO': 'PRODUTO',
+            'REGIAO': 'REGIAO',
+            'ESTADO': 'ESTADO',
+            'MUNICIPIO': 'MUNICIPIO',
+            'NUMERO_DE_POSTOS_PESQUISADOS': 'NUMERO_DE_POSTOS_PESQUISADOS',
+            'UNIDADE_DE_MEDIDA': 'UNIDADE_DE_MEDIDA',
+            'PRECO_MEDIO_REVENDA': 'PRECO_MEDIO_REVENDA',
+            'DESVIO_PADRAO_REVENDA': 'DESVIO_PADRAO_REVENDA',
+            'PRECO_MINIMO_REVENDA': 'PRECO_MINIMO_REVENDA',
+            'PRECO_MAXIMO_REVENDA': 'PRECO_MAXIMO_REVENDA',
+            'COEF_DE_VARIACAO_REVENDA': 'COEF_DE_VARIACAO_REVENDA',
+            
+            # Versões alternativas dos nomes
+            'PRECO_MEDIO_REVENDA': 'PRECO_MEDIO_REVENDA',  # Sem acento
+            'NUMERO_POSTOS_PESQUISADOS': 'NUMERO_DE_POSTOS_PESQUISADOS',
+            'COEF_VARIACAO_REVENDA': 'COEF_DE_VARIACAO_REVENDA',
+        }
+        
+        # Aplicar mapeamento às colunas existentes
+        df = df.rename(columns={k: v for k, v in column_mapping.items() if k in df.columns})
+        
+        # Verificar colunas obrigatórias
+        required_columns = ['MUNICIPIO', 'ESTADO', 'PRODUTO', 'PRECO_MEDIO_REVENDA']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            logger.error(f"Colunas obrigatórias ausentes: {missing_columns}")
+            logger.error(f"Colunas disponíveis: {list(df.columns)}")
+            
+            # Tentar encontrar colunas similares
+            available_cols = list(df.columns)
+            for missing in missing_columns:
+                # Procurar por partes do nome
+                for col in available_cols:
+                    if missing.split('_')[0] in col:
+                        logger.info(f"Renomeando {col} para {missing}")
+                        df = df.rename(columns={col: missing})
                         break
-            
-            if header_row is None:
-                header_row = 0  # Fallback: usar primeira linha como cabeçalho
-                
-            logger.info(f"Cabeçalho encontrado na linha: {header_row}")
-            
-            # Agora ler os dados a partir da linha do cabeçalho
-            df = pd.read_excel(
-                filepath,
-                sheet_name=sheet_name,
-                header=header_row,
-                dtype={'PREÇO MÉDIO REVENDA': 'float64'}
-            )
-            
-            # Remover linhas completamente vazias
-            df = df.dropna(how='all')
-            
-            logger.info(f"Dados lidos: {len(df)} linhas, {len(df.columns)} colunas")
-            logger.info(f"Colunas originais: {list(df.columns)}")
-            
-            # Renomear colunas para formato snake_case
-            df.columns = [
-                col.strip().upper()
-                .replace('Ç', 'C')
-                .replace('Ã', 'A')
-                .replace('Õ', 'O')
-                .replace('É', 'E')
-                .replace('Á', 'A')
-                .replace(' ', '_')
-                .replace('-', '_')
-                .replace('(', '')
-                .replace(')', '')
-                for col in df.columns
-            ]
-            
-            # Verificar colunas esperadas
-            expected_columns = [
-                'MUNICIPIO', 'ESTADO', 'PRODUTO', 
-                'PRECO_MEDIO_REVENDA', 'NUMERO_DE_POSTOS_PESQUISADOS'
-            ]
-            
-            missing_columns = [col for col in expected_columns if col not in df.columns]
-            if missing_columns:
-                logger.warning(f"Colunas ausentes: {missing_columns}")
-                logger.info(f"Colunas disponíveis: {list(df.columns)}")
-                
-                # Tentar mapear colunas alternativas
-                column_mapping = {
-                    'MUNICIPIO': ['MUNICIPIO', 'CIDADE', 'MUNICÍPIO'],
-                    'ESTADO': ['ESTADO', 'UF', 'SIGLA'],
-                    'PRODUTO': ['PRODUTO', 'COMBUSTIVEL', 'COMBUSTÍVEL'],
-                    'PRECO_MEDIO_REVENDA': ['PRECO_MEDIO_REVENDA', 'PRECO', 'PREÇO', 'VALOR'],
-                    'NUMERO_DE_POSTOS_PESQUISADOS': ['NUMERO_DE_POSTOS_PESQUISADOS', 'POSTOS', 'QTD_POSTOS']
-                }
-                
-                for expected, alternatives in column_mapping.items():
-                    if expected not in df.columns:
-                        for alt in alternatives:
-                            if alt in df.columns:
-                                df = df.rename(columns={alt: expected})
-                                logger.info(f"Renomeado {alt} para {expected}")
-                                break
-            
-            logger.info(f"Colunas após processamento: {list(df.columns)}")
-            logger.info(f"Dados carregados com sucesso: {len(df)} registros")
-            
-            return df
-            
-        except Exception as e:
-            logger.error(f"Erro ao carregar dados: {e}")
-            logger.error(traceback.format_exc())
+        
+        # Se não temos DATA_INICIAL, criar a partir de MÊS
+        if 'DATA_INICIAL' not in df.columns and 'MES' in df.columns:
+            # Assumir que MÊS contém algo como "01/2026"
+            df['DATA_INICIAL'] = df['MES'].astype(str).str.slice(0, 10)
+            logger.info("Criada coluna DATA_INICIAL a partir de MÊS")
+        
+        # Se não temos DATA_FINAL, criar como cópia de DATA_INICIAL
+        if 'DATA_FINAL' not in df.columns and 'DATA_INICIAL' in df.columns:
+            df['DATA_FINAL'] = df['DATA_INICIAL']
+            logger.info("Criada coluna DATA_FINAL como cópia de DATA_INICIAL")
+        
+        # Converter tipos de dados
+        numeric_columns = [
+            'PRECO_MEDIO_REVENDA', 'PRECO_MINIMO_REVENDA', 'PRECO_MAXIMO_REVENDA',
+            'DESVIO_PADRAO_REVENDA', 'COEF_DE_VARIACAO_REVENDA',
+            'NUMERO_DE_POSTOS_PESQUISADOS'
+        ]
+        
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Converter strings para maiúsculas
+        string_columns = ['MUNICIPIO', 'ESTADO', 'REGIAO', 'PRODUTO', 'UNIDADE_DE_MEDIDA']
+        for col in string_columns:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.upper().str.strip()
+        
+        logger.info(f"Colunas finais: {list(df.columns)}")
+        logger.info(f"Tipos de dados: {df.dtypes.to_dict()}")
+        logger.info(f"Dados carregados com sucesso: {len(df)} registros")
+        
+        return df
+        
+    except Exception as e:
+        logger.error(f"Erro ao carregar dados: {e}")
+        logger.error(traceback.format_exc())
+        raise Exception(f"Não foi possível ler os dados da ANP: {e}")
             
             # Tentar fallback: ler todas as abas
             try:
