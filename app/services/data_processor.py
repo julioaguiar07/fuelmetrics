@@ -69,21 +69,36 @@ class DataProcessor:
             ]
             
             self.df = self.df[self.df['PRODUTO'].isin(valid_products)]
+
             
             # Consolidar tipos similares
+            # Primeiro, normalizar os nomes dos produtos
+             self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.strip().str.upper()
+            
             product_mapping = {
-                'GASOLINA COMUM': 'GASOLINA',
+                'GASOLINA': 'GASOLINA',
+                'GASOLINA COMUM': 'GASOLINA', 
                 'GASOLINA ADITIVADA': 'GASOLINA',
-                'DIESEL S10': 'DIESEL_S10',
-                'DIESEL S500': 'DIESEL',
-                'GAS NATURAL VEICULAR': 'GNV',
+                'ETANOL HIDRATADO': 'ETANOL',
                 'ETANOL': 'ETANOL',
-                'ALCOOL': 'ETANOL'
+                'ÓLEO DIESEL': 'DIESEL',
+                'ÓLEO DIESEL S10': 'DIESEL_S10',
+                'DIESEL': 'DIESEL',
+                'DIESEL S10': 'DIESEL_S10',
+                'GNV': 'GNV',
+                'GÁS NATURAL VEICULAR': 'GNV'
             }
             
+            # Criar coluna produto_consolidado
             self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
                 lambda x: product_mapping.get(x, x)
             )
+            
+            # Log para debug
+            unique_products = self.df['PRODUTO'].unique()
+            unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
+            logger.info(f"Produtos originais: {list(unique_products)}")
+            logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
             
             # Remover duplicatas (mantendo o menor preço)
             self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
