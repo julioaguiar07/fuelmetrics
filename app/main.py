@@ -15,21 +15,6 @@ from app.utils.logger import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-
-# Teste rápido do downloader
-logger.info("Testando downloader...")
-try:
-    downloader = ANPDownloader()
-    df = downloader.load_data()
-    logger.info(f"Teste OK! Dados carregados: {len(df)} registros")
-    logger.info(f"Colunas: {list(df.columns)}")
-    if len(df) > 0:
-        logger.info(f"Primeiro registro: {df.iloc[0].to_dict()}")
-except Exception as e:
-    logger.error(f"Teste falhou: {e}")
-
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Gerencia ciclo de vida da aplicação"""
