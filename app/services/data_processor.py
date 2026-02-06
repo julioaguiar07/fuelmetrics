@@ -15,6 +15,28 @@ class DataProcessor:
         self._clean_data()
         self._enhance_data()
     
+    def _normalize_region(self, region: str) -> str:
+        """Normaliza o nome da região para o formato padrão"""
+        if not region or pd.isna(region):
+            return "NÃO IDENTIFICADA"
+        
+        region_str = str(region).upper().strip()
+        
+        # Mapear todas as variações para o formato padrão
+        region_mapping = {
+            'CENTRO-OESTE': 'CENTRO_OESTE',
+            'CENTRO OESTE': 'CENTRO_OESTE',
+            'CENTRO  OESTE': 'CENTRO_OESTE',
+            'CENTROOESTE': 'CENTRO_OESTE',
+            'SUDESTE': 'SUDESTE',
+            'SUL': 'SUL',
+            'NORDESTE': 'NORDESTE',
+            'NORTE': 'NORTE',
+            'CENTRO_OESTE': 'CENTRO_OESTE'  # Já está correto
+        }
+        
+        return region_mapping.get(region_str, region_str)
+    
     def _clean_data(self):
         """Limpa e normaliza dados"""
         logger.info("Iniciando limpeza de dados...")
@@ -54,11 +76,14 @@ class DataProcessor:
             self.df['ESTADO'] = self.df['ESTADO'].astype(str).str.upper().str.strip()
             self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.upper().str.strip()
             
-            # Normalizar REGIAO - corrigir "CENTRO OESTE" para "CENTRO-OESTE"
+            # Normalizar REGIAO - corrigir "CENTRO OESTE" para "CENTRO_OESTE"
             if 'REGIAO' in self.df.columns:
                 self.df['REGIAO'] = self.df['REGIAO'].astype(str).str.upper().str.strip()
-                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO-OESTE')
-                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO-OESTE')
+                # Corrigir todas as variações para "CENTRO_OESTE" (COM UNDERLINE)
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO_OESTE')
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO_OESTE')
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO-OESTE', 'CENTRO_OESTE')
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTROOESTE', 'CENTRO_OESTE')
             
             # Remover caracteres especiais e acentos
             self.df['MUNICIPIO'] = self.df['MUNICIPIO'].apply(self._normalize_text)
@@ -112,7 +137,7 @@ class DataProcessor:
                     'PR': 'SUL', 'SC': 'SUL', 'RS': 'SUL',
                     'BA': 'NORDESTE', 'PE': 'NORDESTE', 'CE': 'NORDESTE', 'MA': 'NORDESTE',
                     'PI': 'NORDESTE', 'RN': 'NORDESTE', 'PB': 'NORDESTE', 'AL': 'NORDESTE', 'SE': 'NORDESTE',
-                    'GO': 'CENTRO-OESTE', 'MT': 'CENTRO-OESTE', 'MS': 'CENTRO-OESTE', 'DF': 'CENTRO-OESTE',
+                    'GO': 'CENTRO_OESTE', 'MT': 'CENTRO_OESTE', 'MS': 'CENTRO_OESTE', 'DF': 'CENTRO_OESTE',
                     'AM': 'NORTE', 'PA': 'NORTE', 'AC': 'NORTE', 'RO': 'NORTE', 'RR': 'NORTE', 'AP': 'NORTE', 'TO': 'NORTE'
                 }
                 
@@ -263,11 +288,8 @@ class DataProcessor:
         best_idx = fuel_df['PRECO_MEDIO_REVENDA'].idxmin()
         best = fuel_df.loc[best_idx]
         
-        # Garantir que REGIAO não seja nula
-        region = best['REGIAO']
-        if pd.isna(region) or region is None:
-            logger.warning(f"Região nula para {best['MUNICIPIO']}, {best['ESTADO']}")
-            region = "NÃO IDENTIFICADA"
+        # Normalizar região
+        region = self._normalize_region(best['REGIAO'])
         
         # Usar sigla do estado se disponível
         estado = best['ESTADO_SIGLA'] if 'ESTADO_SIGLA' in best else best['ESTADO']
@@ -278,14 +300,15 @@ class DataProcessor:
         return {
             'price': float(best['PRECO_MEDIO_REVENDA']),
             'city': best['MUNICIPIO'],
-            'state': str(estado),  # Usar sigla
-            'region': str(region),  # Garantir que é string
+            'state': str(estado),
+            'region': region,  # Já normalizada
             'fuel_type': fuel_type.lower(),
             'stations_count': int(best['NUMERO_DE_POSTOS_PESQUISADOS']),
             'latitude': coords['latitude'],
             'longitude': coords['longitude'],
             'price_band': best['FAIXA_PRECO'] if 'FAIXA_PRECO' in best else 'MEDIO'
         }
+        
     def get_ranking(self, fuel_type: str, limit: int = 10):
         """Ranking dos municípios mais baratos"""
         fuel_type_upper = fuel_type.upper()
@@ -319,8 +342,8 @@ class DataProcessor:
             ranking.append({
                 'rank': i + 1,
                 'city': row['MUNICIPIO'],
-                'state': row['ESTADO_SIGLA'],  # Usar sigla
-                'region': row['REGIAO'],
+                'state': row['ESTADO_SIGLA'],
+                'region': self._normalize_region(row['REGIAO']),  # Normalizar região
                 'price': float(row['PRECO_MEDIO_REVENDA']),
                 'stations': int(row['NUMERO_DE_POSTOS_PESQUISADOS']),
                 'latitude': coords['latitude'],
@@ -339,13 +362,18 @@ class DataProcessor:
         for region in self.df['REGIAO'].unique():
             region_df = self.df[self.df['REGIAO'] == region]
             
+            # Garantir que a região está no formato correto
+            region_normalized = str(region).upper().strip()
+            region_normalized = region_normalized.replace('CENTRO-OESTE', 'CENTRO_OESTE')
+            region_normalized = region_normalized.replace('CENTRO OESTE', 'CENTRO_OESTE')
+            
             # Para cada tipo de combustível consolidado
             for fuel in ['GASOLINA', 'DIESEL', 'DIESEL_S10', 'GNV', 'ETANOL']:
                 fuel_df = region_df[region_df['PRODUTO_CONSOLIDADO'] == fuel]
                 
                 if not fuel_df.empty:
                     region_stats.append({
-                        'region': region,
+                        'region': region_normalized,
                         'fuel_type': fuel.lower(),
                         'avg_price': float(fuel_df['PRECO_MEDIO_REVENDA'].mean()),
                         'min_price': float(fuel_df['PRECO_MEDIO_REVENDA'].min()),
