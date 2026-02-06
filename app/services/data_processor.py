@@ -178,14 +178,15 @@ class DataProcessor:
                 'GASOLINA ADITIVADA': 'GASOLINA',
                 'ETANOL HIDRATADO': 'ETANOL',  
                 'ETANOL': 'ETANOL',
-                'ÓLEO DIESEL': 'DIESEL',
-                'ÓLEO DIESEL S10': 'DIESEL_S10',
+                'ÓLEO DIESEL': 'DIESEL',  
+                'ÓLEO DIESEL S10': 'DIESEL_S10',  
+                'ÓLEO_DIESEL': 'DIESEL',  # AQUI!
+                'ÓLEO_DIESEL_S10': 'DIESEL_S10',  # AQUI!
                 'DIESEL': 'DIESEL',
                 'DIESEL S10': 'DIESEL_S10',
                 'GNV': 'GNV',
                 'GÁS NATURAL VEICULAR': 'GNV'
             }
-            
             # Criar coluna produto_consolidado
             self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
                 lambda x: product_mapping.get(x, x)
