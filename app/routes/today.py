@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from app.services.anp_downloader import ANPDownloader
 from app.services.data_processor import DataProcessor
+from app.utils.column_helper import get_column_mapping, normalize_city_name
 from app.services.cache_manager import cache
 from app.models.schemas import (
     BestPriceResponse, RankingItem, RegionStats, 
@@ -312,17 +313,29 @@ async def search_cities(
         processor = get_processor()
         df = processor.df
         
+        # Usar helper para mapeamento correto
+        col_map = get_column_mapping(df)
+        
+        # Normalizar query
+        query_normalized = normalize_city_name(query)
+        
         # Filtrar municípios que contenham o termo
-        results = df[df['municipio'].str.contains(query.upper())]
+        results = df[
+            df[col_map['municipio']].astype(str).apply(normalize_city_name).str.contains(query_normalized)
+        ]
         
         if results.empty:
             return []
         
         # Agrupar por município
-        grouped = results.groupby(['municipio', 'estado', 'regiao']).agg({
-            'preco_medio_revenda': 'mean',
-            'numero_de_postos_pesquisados': 'sum',
-            'produto_consolidado': lambda x: list(x.unique())  # MINÚSCULO
+        grouped = results.groupby([
+            col_map['municipio'], 
+            col_map['estado'], 
+            col_map['regiao']
+        ]).agg({
+            col_map['preco_medio_revenda']: 'mean',
+            col_map['numero_de_postos_pesquisados']: 'sum',
+            col_map['produto_consolidado']: lambda x: list(x.unique())
         }).reset_index()
         
         # Limitar resultados
@@ -330,19 +343,19 @@ async def search_cities(
         
         return [
             {
-                'city': row['municipio'],
-                'state': row['estado'],
-                'region': row['regiao'],
-                'avg_price': float(row['preco_medio_revenda']),
-                'stations': int(row['numero_de_postos_pesquisados']),
-                'available_fuels': row['produto_consolidado']
+                'city': row[col_map['municipio']],
+                'state': row[col_map['estado']],
+                'region': row[col_map['regiao']],
+                'avg_price': float(row[col_map['preco_medio_revenda']]),
+                'stations': int(row[col_map['numero_de_postos_pesquisados']]),
+                'available_fuels': row[col_map['produto_consolidado']]
             }
             for _, row in grouped.iterrows()
         ]
         
     except Exception as e:
-        logger.error(f"Erro em /search: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        logger.error(f"Erro em /search: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/debug-data")
