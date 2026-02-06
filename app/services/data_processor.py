@@ -73,7 +73,7 @@ class DataProcessor:
             
             # Consolidar tipos similares
             # Primeiro, normalizar os nomes dos produtos
-             self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.strip().str.upper()
+            self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.strip().str.upper()
             
             product_mapping = {
                 'GASOLINA': 'GASOLINA',
