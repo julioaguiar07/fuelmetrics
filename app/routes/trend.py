@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Query, HTTPException
 import logging
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 from app.services.anp_downloader import ANPDownloader
 from app.services.data_processor import DataProcessor
 from app.services.cache_manager import cache
 from app.models.schemas import TrendAnalysis, FuelType
+from app.utils.column_helper import get_column_mapping, normalize_city_name  # ADICIONAR
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,24 +25,36 @@ async def analyze_trend(
     """Analisa tendência de preços e gera recomendação"""
     try:
         processor = get_processor()
+        df = processor.df
+        
+        # Usar helper para mapeamento correto
+        col_map = get_column_mapping(df)
         
         # Filtrar dados do combustível
-        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
+        fuel_type_normalized = fuel_type.value.upper()
+        fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.upper() == fuel_type_normalized]
         
         if fuel_df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Nenhum dado encontrado para {fuel_type.value}"
-            )
+            # Tentar variações para diesel
+            if fuel_type.value == 'diesel':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL', case=False, na=False)]
+            elif fuel_type.value == 'diesel_s10':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
+            
+            if fuel_df.empty:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Nenhum dado encontrado para {fuel_type.value}"
+                )
         
-        # Calcular estatísticas (simplificado - em produção usar dados históricos)
-        current_price = float(fuel_df['preco_medio_revenda'].mean())
-        price_std = float(fuel_df['preco_medio_revenda'].std())
+        # Calcular estatísticas
+        current_price = float(fuel_df[col_map['preco_medio_revenda']].mean())
+        price_std = float(fuel_df[col_map['preco_medio_revenda']].std())
         volatility = price_std / current_price if current_price > 0 else 0
         
         # Determinar tendência (simulação)
         # Em produção: analisar variação temporal
-        trend_indicator = _calculate_trend_indicator(fuel_df, lookback_days)
+        trend_indicator = _calculate_trend_indicator(fuel_df, col_map['preco_medio_revenda'], lookback_days)
         
         # Gerar recomendação
         recommendation, reason = _generate_recommendation(
@@ -65,8 +79,8 @@ async def analyze_trend(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro em /analysis: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        logger.error(f"Erro em /analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
 @router.get("/history")
 async def get_price_history(
@@ -76,20 +90,83 @@ async def get_price_history(
     """Retorna histórico de preços (simplificado)"""
     try:
         processor = get_processor()
+        df = processor.df
+        
+        # Usar helper para mapeamento correto
+        col_map = get_column_mapping(df)
+        
+        # Filtrar dados do combustível
+        fuel_type_normalized = fuel_type.value.upper()
+        fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.upper() == fuel_type_normalized]
+        
+        if fuel_df.empty:
+            # Tentar variações para diesel
+            if fuel_type.value == 'diesel':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL', case=False, na=False)]
+            elif fuel_type.value == 'diesel_s10':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
+            
+            if fuel_df.empty:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Nenhum dado encontrado para {fuel_type.value}"
+                )
         
         # Em produção: buscar dados históricos reais
         # Por enquanto, simulamos com os dados atuais
         
-        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
+        # Verificar se temos coluna de data
+        data_col = None
+        for col in df.columns:
+            if 'data' in col.lower() and 'inicial' in col.lower():
+                data_col = col
+                break
         
-        if fuel_df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Nenhum dado encontrado para {fuel_type.value}"
-            )
+        if data_col:
+            # Tentar usar dados temporais reais
+            try:
+                # Converter para datetime se necessário
+                if not pd.api.types.is_datetime64_any_dtype(fuel_df[data_col]):
+                    fuel_df[data_col] = pd.to_datetime(fuel_df[data_col], errors='coerce')
+                
+                # Filtrar últimos N dias
+                cutoff_date = datetime.now() - timedelta(days=days)
+                recent_df = fuel_df[fuel_df[data_col] >= cutoff_date]
+                
+                if not recent_df.empty:
+                    # Agrupar por data
+                    recent_df['data_dia'] = recent_df[data_col].dt.date
+                    grouped = recent_df.groupby('data_dia')[col_map['preco_medio_revenda']].mean().reset_index()
+                    grouped = grouped.sort_values('data_dia')
+                    
+                    history = []
+                    for _, row in grouped.iterrows():
+                        history.append({
+                            'date': row['data_dia'].isoformat(),
+                            'price': float(row[col_map['preco_medio_revenda']]),
+                            'volume': len(recent_df[recent_df['data_dia'] == row['data_dia']])
+                        })
+                    
+                    if history:
+                        current_price = float(fuel_df[col_map['preco_medio_revenda']].mean())
+                        return {
+                            'fuel_type': fuel_type.value,
+                            'period_days': days,
+                            'current_price': round(current_price, 3),
+                            'history': history,
+                            'stats': {
+                                'min': round(min(h['price'] for h in history), 3),
+                                'max': round(max(h['price'] for h in history), 3),
+                                'avg': round(sum(h['price'] for h in history) / len(history), 3),
+                                'volatility': round(np.std([h['price'] for h in history]) / current_price, 4)
+                            },
+                            'source': 'real_data'
+                        }
+            except Exception as e:
+                logger.warning(f"Não foi possível usar dados temporais: {e}")
         
-        # Simular histórico (em produção, usar dados reais)
-        current_price = float(fuel_df['preco_medio_revenda'].mean())
+        # Se não conseguiu dados temporais, simular
+        current_price = float(fuel_df[col_map['preco_medio_revenda']].mean())
         base_date = datetime.now() - timedelta(days=days)
         
         # Gerar série temporal simulada
@@ -121,14 +198,15 @@ async def get_price_history(
                 'max': round(max(h['price'] for h in history), 3),
                 'avg': round(sum(h['price'] for h in history) / len(history), 3),
                 'volatility': round(np.std([h['price'] for h in history]) / current_price, 4)
-            }
+            },
+            'source': 'simulated_data'
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro em /history: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        logger.error(f"Erro em /history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
 @router.get("/volatility")
 async def get_volatility_analysis(
@@ -137,16 +215,29 @@ async def get_volatility_analysis(
     """Analisa volatilidade dos preços"""
     try:
         processor = get_processor()
+        df = processor.df
         
-        fuel_df = processor.df[processor.df['produto_consolidado'] == fuel_type.value.upper()]
+        # Usar helper para mapeamento correto
+        col_map = get_column_mapping(df)
+        
+        # Filtrar dados do combustível
+        fuel_type_normalized = fuel_type.value.upper()
+        fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.upper() == fuel_type_normalized]
         
         if fuel_df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Nenhum dado encontrado para {fuel_type.value}"
-            )
+            # Tentar variações para diesel
+            if fuel_type.value == 'diesel':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL', case=False, na=False)]
+            elif fuel_type.value == 'diesel_s10':
+                fuel_df = df[df[col_map['produto_consolidado']].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
+            
+            if fuel_df.empty:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Nenhum dado encontrado para {fuel_type.value}"
+                )
         
-        prices = fuel_df['preco_medio_revenda'].values
+        prices = fuel_df[col_map['preco_medio_revenda']].values
         
         # Calcular métricas de volatilidade
         std_dev = float(np.std(prices))
@@ -193,18 +284,21 @@ async def get_volatility_analysis(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro em /volatility: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        logger.error(f"Erro em /volatility: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
-def _calculate_trend_indicator(fuel_df, lookback_days):
+def _calculate_trend_indicator(fuel_df, price_column, lookback_days):
     """Calcula indicador de tendência (simplificado)"""
     # Em produção: calcular variação real ao longo do tempo
     # Por enquanto, simulamos com base na distribuição atual
     
-    prices = fuel_df['preco_medio_revenda'].values
+    prices = fuel_df[price_column].values
     
     # Simular tendência baseada na assimetria dos dados
-    skewness = float((np.mean(prices) - np.median(prices)) / np.std(prices) if np.std(prices) > 0 else 0)
+    if len(prices) > 1 and np.std(prices) > 0:
+        skewness = float((np.mean(prices) - np.median(prices)) / np.std(prices))
+    else:
+        skewness = 0
     
     # Converter para escala -100 a 100
     trend = skewness * 50  # Amplificar o efeito
