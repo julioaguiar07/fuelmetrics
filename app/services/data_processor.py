@@ -54,12 +54,84 @@ class DataProcessor:
             self.df['ESTADO'] = self.df['ESTADO'].astype(str).str.upper().str.strip()
             self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.upper().str.strip()
             
+            # Normalizar REGIAO - corrigir "CENTRO OESTE" para "CENTRO-OESTE"
+            if 'REGIAO' in self.df.columns:
+                self.df['REGIAO'] = self.df['REGIAO'].astype(str).str.upper().str.strip()
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO-OESTE')
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO-OESTE')
+            
             # Remover caracteres especiais e acentos
             self.df['MUNICIPIO'] = self.df['MUNICIPIO'].apply(self._normalize_text)
             self.df['PRODUTO'] = self.df['PRODUTO'].apply(self._normalize_text)
             
-            # Mapear regiões
-            self.df['REGIAO'] = self.df['ESTADO'].map(STATE_TO_REGION)
+            # Converter nomes de estados completos para siglas
+            def estado_para_sigla(estado_nome):
+                estado_nome = str(estado_nome).upper().strip()
+                
+                mapeamento = {
+                    'SAO PAULO': 'SP', 'SÃO PAULO': 'SP',
+                    'RIO DE JANEIRO': 'RJ', 
+                    'MINAS GERAIS': 'MG',
+                    'ESPIRITO SANTO': 'ES', 'ESPÍRITO SANTO': 'ES',
+                    'PARANA': 'PR', 'PARANÁ': 'PR',
+                    'SANTA CATARINA': 'SC',
+                    'RIO GRANDE DO SUL': 'RS',
+                    'MATO GROSSO': 'MT',
+                    'MATO GROSSO DO SUL': 'MS',
+                    'GOIAS': 'GO', 'GOIÁS': 'GO',
+                    'DISTRITO FEDERAL': 'DF',
+                    'BAHIA': 'BA', 'BAÍA': 'BA',
+                    'PERNAMBUCO': 'PE',
+                    'CEARA': 'CE', 'CEARÁ': 'CE',
+                    'MARANHAO': 'MA', 'MARANHÃO': 'MA',
+                    'PIAUI': 'PI', 'PIAUÍ': 'PI',
+                    'RIO GRANDE DO NORTE': 'RN',
+                    'PARAIBA': 'PB', 'PARAÍBA': 'PB',
+                    'ALAGOAS': 'AL',
+                    'SERGIPE': 'SE',
+                    'PARA': 'PA', 'PARÁ': 'PA',
+                    'AMAZONAS': 'AM',
+                    'ACRE': 'AC',
+                    'RONDONIA': 'RO', 'RONDÔNIA': 'RO',
+                    'RORAIMA': 'RR',
+                    'AMAPA': 'AP', 'AMAPÁ': 'AP',
+                    'TOCANTINS': 'TO'
+                }
+                
+                return mapeamento.get(estado_nome, estado_nome)
+            
+            self.df['ESTADO_SIGLA'] = self.df['ESTADO'].apply(estado_para_sigla)
+            logger.info(f"Estados convertidos. Exemplos: {self.df[['ESTADO', 'ESTADO_SIGLA']].head(10).to_dict('records')}")
+            
+            # Mapear regiões usando as siglas
+            def get_region_from_state_sigla(sigla):
+                sigla = str(sigla).upper().strip()
+                
+                region_mapping = {
+                    'SP': 'SUDESTE', 'RJ': 'SUDESTE', 'MG': 'SUDESTE', 'ES': 'SUDESTE',
+                    'PR': 'SUL', 'SC': 'SUL', 'RS': 'SUL',
+                    'BA': 'NORDESTE', 'PE': 'NORDESTE', 'CE': 'NORDESTE', 'MA': 'NORDESTE',
+                    'PI': 'NORDESTE', 'RN': 'NORDESTE', 'PB': 'NORDESTE', 'AL': 'NORDESTE', 'SE': 'NORDESTE',
+                    'GO': 'CENTRO-OESTE', 'MT': 'CENTRO-OESTE', 'MS': 'CENTRO-OESTE', 'DF': 'CENTRO-OESTE',
+                    'AM': 'NORTE', 'PA': 'NORTE', 'AC': 'NORTE', 'RO': 'NORTE', 'RR': 'NORTE', 'AP': 'NORTE', 'TO': 'NORTE'
+                }
+                
+                return region_mapping.get(sigla, 'NÃO IDENTIFICADA')
+            
+            self.df['REGIAO'] = self.df['ESTADO_SIGLA'].apply(get_region_from_state_sigla)
+            
+            # Se já tínhamos REGIAO do arquivo, priorizar ela (mas garantir formatação)
+            if 'REGIAO' in self.df.columns:
+                # Corrigir qualquer inconsistência
+                self.df['REGIAO'] = self.df['REGIAO'].str.upper().str.strip()
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO OESTE', 'CENTRO-OESTE')
+                self.df['REGIAO'] = self.df['REGIAO'].str.replace('CENTRO  OESTE', 'CENTRO-OESTE')
+            
+            # Verificar se há regiões não identificadas
+            regioes_nao_id = self.df[self.df['REGIAO'] == 'NÃO IDENTIFICADA']
+            if len(regioes_nao_id) > 0:
+                logger.warning(f"Regiões não identificadas para {len(regioes_nao_id)} registros")
+                logger.warning(f"Estados problemáticos: {regioes_nao_id['ESTADO'].unique()}")
             
             # Filtrar produtos relevantes
             valid_products = [
@@ -191,21 +263,29 @@ class DataProcessor:
         best_idx = fuel_df['PRECO_MEDIO_REVENDA'].idxmin()
         best = fuel_df.loc[best_idx]
         
-        # Calcular latitude/longitude aproximada (em produção, usar dados reais)
-        coords = self._estimate_coordinates(best['MUNICIPIO'], best['ESTADO'])
+        # Garantir que REGIAO não seja nula
+        region = best['REGIAO']
+        if pd.isna(region) or region is None:
+            logger.warning(f"Região nula para {best['MUNICIPIO']}, {best['ESTADO']}")
+            region = "NÃO IDENTIFICADA"
+        
+        # Usar sigla do estado se disponível
+        estado = best['ESTADO_SIGLA'] if 'ESTADO_SIGLA' in best else best['ESTADO']
+        
+        # Calcular latitude/longitude aproximada
+        coords = self._estimate_coordinates(best['MUNICIPIO'], estado)
         
         return {
             'price': float(best['PRECO_MEDIO_REVENDA']),
             'city': best['MUNICIPIO'],
-            'state': best['ESTADO'],
-            'region': best['REGIAO'],
+            'state': str(estado),  # Usar sigla
+            'region': str(region),  # Garantir que é string
             'fuel_type': fuel_type.lower(),
             'stations_count': int(best['NUMERO_DE_POSTOS_PESQUISADOS']),
             'latitude': coords['latitude'],
             'longitude': coords['longitude'],
             'price_band': best['FAIXA_PRECO'] if 'FAIXA_PRECO' in best else 'MEDIO'
         }
-    
     def get_ranking(self, fuel_type: str, limit: int = 10):
         """Ranking dos municípios mais baratos"""
         fuel_type_upper = fuel_type.upper()
@@ -221,7 +301,7 @@ class DataProcessor:
             return []
         
         # Agrupar por município (média de preços se houver múltiplos registros)
-        grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO', 'REGIAO']).agg({
+        grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
             'PRECO_MEDIO_REVENDA': 'mean',
             'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
         }).reset_index()
@@ -234,12 +314,12 @@ class DataProcessor:
         
         ranking = []
         for i, (_, row) in enumerate(ranked.iterrows()):
-            coords = self._estimate_coordinates(row['MUNICIPIO'], row['ESTADO'])
+            coords = self._estimate_coordinates(row['MUNICIPIO'], row['ESTADO_SIGLA'])
             
             ranking.append({
                 'rank': i + 1,
                 'city': row['MUNICIPIO'],
-                'state': row['ESTADO'],
+                'state': row['ESTADO_SIGLA'],  # Usar sigla
                 'region': row['REGIAO'],
                 'price': float(row['PRECO_MEDIO_REVENDA']),
                 'stations': int(row['NUMERO_DE_POSTOS_PESQUISADOS']),
@@ -394,7 +474,48 @@ class DataProcessor:
     
     def _estimate_coordinates(self, city: str, state: str):
         """Estima coordenadas geográficas (em produção, usar API real)"""
-        # Coordenadas aproximadas das capitais
+        # Converter estado para sigla se necessário
+        state_str = str(state).upper().strip()
+        
+        # Se estado está por extenso, converter para sigla
+        estado_para_sigla = {
+            'SAO PAULO': 'SP', 'SÃO PAULO': 'SP',
+            'RIO DE JANEIRO': 'RJ', 
+            'MINAS GERAIS': 'MG',
+            'ESPIRITO SANTO': 'ES', 'ESPÍRITO SANTO': 'ES',
+            'PARANA': 'PR', 'PARANÁ': 'PR',
+            'SANTA CATARINA': 'SC',
+            'RIO GRANDE DO SUL': 'RS',
+            'MATO GROSSO': 'MT',
+            'MATO GROSSO DO SUL': 'MS',
+            'GOIAS': 'GO', 'GOIÁS': 'GO',
+            'DISTRITO FEDERAL': 'DF',
+            'BAHIA': 'BA',
+            'PERNAMBUCO': 'PE',
+            'CEARA': 'CE', 'CEARÁ': 'CE',
+            'MARANHAO': 'MA', 'MARANHÃO': 'MA',
+            'PIAUI': 'PI', 'PIAUÍ': 'PI',
+            'RIO GRANDE DO NORTE': 'RN',
+            'PARAIBA': 'PB', 'PARAÍBA': 'PB',
+            'ALAGOAS': 'AL',
+            'SERGIPE': 'SE',
+            'PARA': 'PA', 'PARÁ': 'PA',
+            'AMAZONAS': 'AM',
+            'ACRE': 'AC',
+            'RONDONIA': 'RO', 'RONDÔNIA': 'RO',
+            'RORAIMA': 'RR',
+            'AMAPA': 'AP', 'AMAPÁ': 'AP',
+            'TOCANTINS': 'TO'
+        }
+        
+        # Verificar se o estado está no mapeamento
+        if state_str in estado_para_sigla:
+            state_sigla = estado_para_sigla[state_str]
+            logger.debug(f"Convertido estado '{state_str}' para sigla '{state_sigla}'")
+        else:
+            state_sigla = state_str  # Já deve ser sigla
+        
+        # Coordenadas aproximadas das capitais (usando SIGLAS)
         capital_coords = {
             'SP': (-23.5505, -46.6333),  # São Paulo
             'RJ': (-22.9068, -43.1729),  # Rio de Janeiro
@@ -424,8 +545,8 @@ class DataProcessor:
             'TO': (-10.1844, -48.3336)  # Palmas
         }
         
-        if state in capital_coords:
-            lat, lon = capital_coords[state]
+        if state_sigla in capital_coords:
+            lat, lon = capital_coords[state_sigla]
             # Adicionar pequena variação baseada no nome da cidade
             import hashlib
             city_hash = int(hashlib.md5(city.encode()).hexdigest()[:8], 16)
@@ -437,6 +558,7 @@ class DataProcessor:
                 'longitude': round(lon + lon_variation, 6)
             }
         
+        logger.warning(f"Estado '{state}' (sigla: '{state_sigla}') não encontrado no mapeamento de coordenadas")
         return {'latitude': None, 'longitude': None}
     
     def _generate_trend_recommendation(self, price, volatility, trend, strength):
