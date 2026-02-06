@@ -161,14 +161,21 @@ class DataProcessor:
             # Filtrar produtos relevantes
             valid_products = [
                 'GASOLINA', 'GASOLINA COMUM', 'GASOLINA ADITIVADA',
-                'OLEO DIESEL', 'ÓLEO DIESEL',  
-                'OLEO DIESEL S10', 'ÓLEO DIESEL S10',  
-                'DIESEL', 'DIESEL S10', 'DIESEL S500', 
-                'GNV', 'GAS NATURAL VEICULAR', 
-                'ETANOL', 'ETANOL HIDRATADO', 'ALCOOL'
+                'ÓLEO DIESEL', 'OLEO DIESEL', 'DIESEL',  # Diferentes formas
+                'ÓLEO DIESEL S10', 'OLEO DIESEL S10', 'DIESEL S10',
+                'DIESEL S500', 
+                'GNV', 'GÁS NATURAL VEICULAR', 'GAS NATURAL VEICULAR',
+                'ETANOL', 'ETANOL HIDRATADO', 'ALCOOL', 'ÁLCOOL'
             ]
             
-            self.df = self.df[self.df['PRODUTO'].isin(valid_products)]
+            # Usar contains para capturar variações
+            def is_valid_product(product):
+                if not isinstance(product, str):
+                    return False
+                product_upper = product.upper()
+                return any(valid in product_upper for valid in ['GASOLINA', 'DIESEL', 'GNV', 'ETANOL', 'ALCOOL'])
+            
+            self.df = self.df[self.df['PRODUTO'].apply(is_valid_product)]
             
             # E depois, substitua o product_mapping:
             
@@ -178,19 +185,30 @@ class DataProcessor:
                 'GASOLINA ADITIVADA': 'GASOLINA',
                 'ETANOL HIDRATADO': 'ETANOL',  
                 'ETANOL': 'ETANOL',
-                'ÓLEO DIESEL': 'DIESEL',  
-                'OLEO DIESEL': 'DIESEL',  
-                'ÓLEO DIESEL S10': 'DIESEL_S10',  
-                'OLEO DIESEL S10': 'DIESEL_S10',  
+                'ÁLCOOL': 'ETANOL',
+                'ALCOOL': 'ETANOL',
+                'ÓLEO DIESEL': 'DIESEL',
+                'OLEO DIESEL': 'DIESEL',
                 'DIESEL': 'DIESEL',
+                'ÓLEO DIESEL S10': 'DIESEL_S10',
+                'OLEO DIESEL S10': 'DIESEL_S10',
                 'DIESEL S10': 'DIESEL_S10',
+                'DIESEL S500': 'DIESEL',
                 'GNV': 'GNV',
                 'GÁS NATURAL VEICULAR': 'GNV',
                 'GAS NATURAL VEICULAR': 'GNV'
             }
-                        # Criar coluna produto_consolidado
+            
+            # Criar coluna produto_consolidado
             self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
-                lambda x: product_mapping.get(x, x)
+                lambda x: product_mapping.get(str(x).strip().upper(), str(x).strip().upper())
+            )
+            
+            # Log para debug
+            unique_products = self.df['PRODUTO'].unique()
+            unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
+            logger.info(f"Produtos originais: {list(unique_products)[:10]}")
+            logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
             )
             # Log para debug
             logger.info(f"DEBUG - Colunas após processamento: {list(self.df.columns)}")
