@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelMetrics - Análise Inteligente de Combustíveis</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #FAFAFA;
+            --color-surface: #FFFFFF;
+            --color-text-primary: #0A0A0A;
+            --color-text-secondary: #6B6B6B;
+            --color-text-tertiary: #9E9E9E;
+            --color-border: #E8E8E8;
+            --color-success: #00A86B;
+            --color-success-light: #E8F5F0;
+            --color-danger: #E63946;
+            --color-danger-light: #FFF0F1;
+            --color-warning: #FFA500;
+            --color-warning-light: #FFF5E6;
+            --color-neutral: #F5F5F5;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+            --spacing-3xl: 64px;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--color-border);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        header .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 72px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        nav {
+            display: flex;
+            gap: var(--spacing-xl);
+        }
+
+        nav a {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        nav a:hover {
+            color: var(--color-text-primary);
+        }
+
+        nav a.active {
+            color: var(--color-text-primary);
+        }
+
+        nav a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--color-success);
+        }
+
+        /* Main Content */
+        main {
+            padding-top: 96px;
+            min-height: 100vh;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .kpi-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            transition: all 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+            margin-bottom: var(--spacing-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .kpi-value.success {
+            color: var(--color-success);
+        }
+
+        .kpi-value.danger {
+            color: var(--color-danger);
+        }
+
+        .kpi-meta {
+            font-size: 14px;
+            color: var(--color-text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--color-neutral);
+            color: var(--color-text-secondary);
+        }
+
+        .badge.success {
+            background: var(--color-success-light);
+            color: var(--color-success);
+        }
+
+        /* Map Section */
+        .map-section {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .map-container {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            min-height: 600px;
+            position: relative;
+        }
+
+        .map-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            color: var(--color-text-primary);
+        }
+
+        #brazilMap {
+            width: 100%;
+            height: 550px;
+        }
+
+        .region {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .region:hover {
+            opacity: 0.8;
+            stroke-width: 2;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(10, 10, 10, 0.95);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .legend-gradient {
+            width: 200px;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, var(--color-success), var(--color-warning), var(--color-danger));
+        }
+
+        /* Ranking */
+        .ranking-panel {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            height: fit-content;
+        }
+
+        .ranking-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            color: var(--color-text-primary);
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-sm);
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .ranking-item:hover {
+            background: var(--color-neutral);
+            border-color: var(--color-border);
+        }
+
+        .ranking-item.top {
+            background: var(--color-success-light);
+            border-color: var(--color-success);
+        }
+
+        .ranking-number {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--color-neutral);
+            font-weight: 700;
+            font-size: 13px;
+            margin-right: var(--spacing-md);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .ranking-item.top .ranking-number {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .ranking-info {
+            flex: 1;
+        }
+
+        .ranking-city {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--color-text-primary);
+        }
+
+        .ranking-state {
+            font-size: 12px;
+            color: var(--color-text-tertiary);
+        }
+
+        .ranking-price {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--color-success);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Filters */
+        .filters {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-bottom: var(--spacing-md);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--color-text-primary);
+            color: var(--color-text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--color-text-primary);
+            color: white;
+            border-color: var(--color-text-primary);
+        }
+
+        /* Search Input */
+        .search-section {
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            background: var(--color-surface);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-text-primary);
+            box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+        }
+
+        .autocomplete-list {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            margin-top: var(--spacing-sm);
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .autocomplete-item {
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 14px;
+        }
+
+        .autocomplete-item:hover {
+            background: var(--color-neutral);
+        }
+
+        /* Comparison Cards */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .comparison-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .comparison-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .comparison-card.winner {
+            border-color: var(--color-success);
+            background: var(--color-success-light);
+        }
+
+        .winner-badge {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            padding: 4px 12px;
+            background: var(--color-success);
+            color: white;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .comparison-city {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-text-primary);
+        }
+
+        .comparison-stats {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Decision Card */
+        .decision-card {
+            background: linear-gradient(135deg, var(--color-success) 0%, #008f5a 100%);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            color: white;
+            margin-bottom: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .decision-card.danger {
+            background: linear-gradient(135deg, var(--color-danger) 0%, #c92a35 100%);
+        }
+
+        .decision-card.warning {
+            background: linear-gradient(135deg, var(--color-warning) 0%, #e69500 100%);
+        }
+
+        .decision-title {
+            font-size: 16px;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-sm);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .decision-result {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .decision-diff {
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.95;
+            margin-bottom: var(--spacing-md);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .decision-explanation {
+            font-size: 15px;
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            color: var(--color-text-primary);
+        }
+
+        #trendChart {
+            width: 100%;
+            height: 400px;
+        }
+
+        /* Indicators Grid */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .indicator-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .indicator-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto var(--spacing-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 24px;
+        }
+
+        .indicator-icon.up {
+            background: var(--color-danger-light);
+            color: var(--color-danger);
+        }
+
+        .indicator-icon.down {
+            background: var(--color-success-light);
+            color: var(--color-success);
+        }
+
+        .indicator-icon.stable {
+            background: var(--color-neutral);
+            color: var(--color-text-secondary);
+        }
+
+        .indicator-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .indicator-label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+        }
+
+        /* Tank Simulator */
+        .simulator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-2xl);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .simulator-section {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            color: var(--color-text-primary);
+        }
+
+        .input-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .input-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-bottom: var(--spacing-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-text-primary);
+            box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.05);
+        }
+
+        .slider-container {
+            position: relative;
+            padding: var(--spacing-md) 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--color-border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--color-text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 6px rgba(10, 10, 10, 0.1);
+        }
+
+        .slider-value {
+            text-align: center;
+            margin-top: var(--spacing-sm);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Tank Visual */
+        .tank-visual {
+            margin: var(--spacing-xl) auto;
+            max-width: 200px;
+        }
+
+        .tank-container-visual {
+            width: 100px;
+            height: 200px;
+            border: 3px solid var(--color-text-primary);
+            border-radius: 10px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background: var(--color-neutral);
+        }
+
+        .tank-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, var(--color-success) 0%, #00bd74 100%);
+            transition: height 0.3s ease;
+        }
+
+        .tank-percentage {
+            text-align: center;
+            margin-top: var(--spacing-md);
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Result Card */
+        .result-card {
+            background: var(--color-surface);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-2xl);
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .result-card.success {
+            border-color: var(--color-success);
+            background: var(--color-success-light);
+        }
+
+        .result-card.warning {
+            border-color: var(--color-warning);
+            background: var(--color-warning-light);
+        }
+
+        .result-card.danger {
+            border-color: var(--color-danger);
+            background: var(--color-danger-light);
+        }
+
+        .result-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 40px;
+        }
+
+        .result-card.success .result-icon {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .result-card.warning .result-icon {
+            background: var(--color-warning);
+            color: white;
+        }
+
+        .result-card.danger .result-icon {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .result-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-text-primary);
+        }
+
+        .result-message {
+            font-size: 16px;
+            color: var(--color-text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--color-border);
+            border-top-color: var(--color-success);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: var(--color-success);
+            background: var(--color-success-light);
+        }
+
+        .notification.error {
+            border-color: var(--color-danger);
+            background: var(--color-danger-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .map-section {
+                grid-template-columns: 1fr;
+            }
+
+            .simulator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                display: none;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="logo">FuelMetrics</div>
+            <nav>
+                <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
+                <a href="#" data-page="compare">Vale a pena desviar?</a>
+                <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
+                <a href="#" data-page="simulator">Simulação de rota</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <main>
+        <!-- Page 1: Onde abastecer hoje -->
+        <div id="today" class="page active">
+            <div class="container">
+                <div style="margin-bottom: var(--spacing-2xl);">
+                    <h1 style="font-size: 36px; font-weight: 700; margin-bottom: var(--spacing-sm);">Onde abastecer hoje?</h1>
+                    <p style="color: var(--color-text-secondary); font-size: 16px;">Análise em tempo real dos melhores preços de combustível no Brasil</p>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <div class="filter-label">Tipo de Combustível</div>
+                    <div class="filter-options">
+                        <button class="filter-btn active" data-fuel="gasolina">Gasolina</button>
+                        <button class="filter-btn" data-fuel="diesel">Diesel</button>
+                        <button class="filter-btn" data-fuel="diesel_s10">Diesel S10</button>
+                        <button class="filter-btn" data-fuel="gnv">GNV</button>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="kpi-grid" id="todayKpis">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Melhor Preço Hoje</div>
+                        <div class="kpi-value success">R$ --</div>
+                        <div class="kpi-meta">
+                            <span class="badge">Gasolina Comum</span>
+                        </div>
+                        <div class="kpi-meta" style="margin-top: var(--spacing-sm);">
+                            <span id="bestPriceLocation">📍 Carregando...</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-label">Economia Potencial</div>
+                        <div class="kpi-value success">R$ --</div>
+                        <div class="kpi-meta">
+                            <span>por litro vs pior preço</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-label">Postos Analisados</div>
+                        <div class="kpi-value">--</div>
+                        <div class="kpi-meta">
+                            <span>em todo o país</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-label">Última Atualização</div>
+                        <div class="kpi-value" style="font-size: 24px;" id="lastUpdate">--/--/----</div>
+                        <div class="kpi-meta">
+                            <span class="badge success" id="updateStatus">Conectando...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Section -->
+                <div class="map-section">
+                    <div class="map-container">
+                        <div class="map-title">Mapa de Preços por Região</div>
+                        <svg id="brazilMap" viewBox="0 0 800 900">
+                            <!-- Simplified Brazil map with regions -->
+                            <!-- Norte -->
+                            <path class="region" data-region="NORTE" d="M200,50 L450,50 L450,250 L350,280 L200,220 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                            <!-- Nordeste -->
+                            <path class="region" data-region="NORDESTE" d="M450,50 L680,80 L650,320 L450,250 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                            <!-- Centro-Oeste -->
+                            <path class="region" data-region="CENTRO-OESTE" d="M200,220 L350,280 L450,250 L420,500 L180,480 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                            <!-- Sudeste -->
+                            <path class="region" data-region="SUDESTE" d="M420,500 L450,250 L650,320 L580,580 L450,600 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                            <!-- Sul -->
+                            <path class="region" data-region="SUL" d="M180,480 L420,500 L450,600 L350,750 L180,700 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                        </svg>
+                        <div class="legend">
+                            <span>Mais barato</span>
+                            <div class="legend-gradient"></div>
+                            <span>Mais caro</span>
+                        </div>
+                        <div class="tooltip" id="mapTooltip"></div>
+                    </div>
+
+                    <!-- Ranking -->
+                    <div class="ranking-panel">
+                        <div class="ranking-title">Top 10 Mais Baratos</div>
+                        <div id="rankingList">
+                            <!-- Ranking será carregado dinamicamente -->
+                            <div class="ranking-item" style="text-align: center; padding: var(--spacing-2xl);">
+                                <div class="loading"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 2: Vale a pena desviar -->
+        <div id="compare" class="page">
+            <div class="container">
+                <div style="margin-bottom: var(--spacing-2xl);">
+                    <h1 style="font-size: 36px; font-weight: 700; margin-bottom: var(--spacing-sm);">Vale a pena desviar a rota?</h1>
+                    <p style="color: var(--color-text-secondary); font-size: 16px;">Compare preços entre diferentes municípios</p>
+                </div>
+
+                <!-- Search -->
+                <div class="search-section">
+                    <input type="text" class="search-input" placeholder="Digite o nome do município (ex: São Paulo, Campinas, Poços de Caldas)..." id="citySearch">
+                    <div class="autocomplete-list" id="autocompleteList" style="display: none;"></div>
+                </div>
+
+                <!-- Selected Cities -->
+                <div id="selectedCities" class="filters" style="display: none;">
+                    <div class="filter-label">Cidades Selecionadas</div>
+                    <div class="filter-options" id="cityTags"></div>
+                </div>
+
+                <!-- Decision Card -->
+                <div class="decision-card" id="compareDecision">
+                    <div class="decision-title">Recomendação</div>
+                    <div class="decision-result">Selecione pelo menos duas cidades para comparação</div>
+                    <div class="decision-diff">Digite os nomes acima e pressione Enter</div>
+                    <div class="decision-explanation">O sistema comparará os preços médios, mínimos e máximos de cada cidade e indicará qual oferece a melhor economia.</div>
+                </div>
+
+                <!-- Comparison -->
+                <div class="comparison-grid" id="comparisonGrid">
+                    <!-- Cards serão gerados dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 3: Abastecer agora ou esperar -->
+        <div id="trend" class="page">
+            <div class="container">
+                <div style="margin-bottom: var(--spacing-2xl);">
+                    <h1 style="font-size: 36px; font-weight: 700; margin-bottom: var(--spacing-sm);">Abastecer agora ou esperar?</h1>
+                    <p style="color: var(--color-text-secondary); font-size: 16px;">Análise de tendência e volatilidade de preços</p>
+                </div>
+
+                <!-- Fuel Filter -->
+                <div class="filters">
+                    <div class="filter-label">Tipo de Combustível</div>
+                    <div class="filter-options">
+                        <button class="filter-btn active" data-fuel="gasolina">Gasolina</button>
+                        <button class="filter-btn" data-fuel="diesel">Diesel</button>
+                        <button class="filter-btn" data-fuel="diesel_s10">Diesel S10</button>
+                        <button class="filter-btn" data-fuel="gnv">GNV</button>
+                    </div>
+                </div>
+
+                <!-- Decision -->
+                <div class="decision-card" id="trendDecision">
+                    <div class="decision-title">Recomendação Baseada em Dados</div>
+                    <div class="decision-result">Analisando dados...</div>
+                    <div class="decision-explanation">Carregando análise de tendência dos preços.</div>
+                </div>
+
+                <!-- Indicators -->
+                <div class="indicators-grid" id="trendIndicators">
+                    <div class="indicator-card">
+                        <div class="indicator-icon up">↗</div>
+                        <div class="indicator-value" style="color: var(--color-text-tertiary);">--%</div>
+                        <div class="indicator-label">Variação</div>
+                    </div>
+
+                    <div class="indicator-card">
+                        <div class="indicator-icon stable">📊</div>
+                        <div class="indicator-value" style="font-size: 20px;">--</div>
+                        <div class="indicator-label">Volatilidade</div>
+                    </div>
+
+                    <div class="indicator-card">
+                        <div class="indicator-icon stable">📈</div>
+                        <div class="indicator-value" style="font-size: 18px; color: var(--color-text-tertiary);">Analisando</div>
+                        <div class="indicator-label">Tendência</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="chart-section">
+                    <div class="chart-title">Evolução de Preços - Últimos 30 Dias</div>
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 4: Simulação de rota -->
+        <div id="simulator" class="page">
+            <div class="container">
+                <div style="margin-bottom: var(--spacing-2xl);">
+                    <h1 style="font-size: 36px; font-weight: 700; margin-bottom: var(--spacing-sm);">Simulação de Rota</h1>
+                    <p style="color: var(--color-text-secondary); font-size: 16px;">Verifique se você consegue completar sua viagem com segurança</p>
+                </div>
+
+                <div class="simulator-grid">
+                    <!-- Tank Configuration -->
+                    <div class="simulator-section">
+                        <div class="section-title">Configuração do Veículo</div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Capacidade do Tanque (L)</label>
+                            <input type="number" class="input-field" id="tankCapacity" value="50" min="1" max="200" step="1">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Nível Atual (%)</label>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="currentLevel" min="0" max="100" value="60">
+                                <div class="slider-value" id="levelValue">60%</div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Consumo Médio (km/L)</label>
+                            <input type="number" class="input-field" id="consumption" value="12" min="1" max="50" step="0.1">
+                        </div>
+
+                        <div class="tank-visual">
+                            <div class="tank-container-visual">
+                                <div class="tank-fill" id="tankFill" style="height: 60%;"></div>
+                            </div>
+                            <div class="tank-percentage">
+                                <span id="tankLiters">30.0</span> L
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trip Simulation -->
+                    <div class="simulator-section">
+                        <div class="section-title">Dados da Viagem</div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Origem</label>
+                            <input type="text" class="input-field" id="origin" value="São Paulo, SP" placeholder="Ex: São Paulo, SP">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Destino</label>
+                            <input type="text" class="input-field" id="destination" value="Campinas, SP" placeholder="Ex: Campinas, SP">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Distância Estimada (km)</label>
+                            <input type="number" class="input-field" id="distance" value="95" min="1" max="10000" step="1">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Tipo de Combustível</label>
+                            <select class="input-field" id="simulatorFuelType">
+                                <option value="gasolina">Gasolina</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="diesel_s10">Diesel S10</option>
+                                <option value="gnv">GNV</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-top: var(--spacing-xl);">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Autonomia Atual</div>
+                                <div class="kpi-value success" id="autonomy">360</div>
+                                <div class="kpi-meta">
+                                    <span>quilômetros</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result -->
+                <div class="result-card" id="tripResult">
+                    <div class="result-icon">⏳</div>
+                    <div class="result-title">Aguardando dados</div>
+                    <div class="result-message">Preencha os dados da viagem acima e o sistema calculará se você pode completá-la com segurança.</div>
+                </div>
+
+                <!-- Calculate Button -->
+                <div style="text-align: center; margin-top: var(--spacing-2xl);">
+                    <button id="calculateTrip" style="
+                        padding: var(--spacing-lg) var(--spacing-2xl);
+                        background: var(--color-success);
+                        color: white;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        Calcular Viabilidade da Viagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO E CONSTANTES
+        // ============================================
+        
+        // Configuração da API
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000/api' 
+            : '/api'; // Usar caminho relativo em produção
+        
+        const API_ENDPOINTS = {
+            TODAY: {
+                SUMMARY: '/today/summary',
+                RANKING: '/today/ranking',
+                REGIONS: '/today/regions',
+                BEST_PRICE: '/today/best-price',
+                STATS: '/today/stats',
+                SEARCH: '/today/search'
+            },
+            COMPARE: {
+                CITIES: '/compare/cities',
+                RECOMMENDATION: '/compare/recommendation',
+                NEARBY: '/compare/nearby'
+            },
+            TREND: {
+                ANALYSIS: '/trend/analysis',
+                HISTORY: '/trend/history',
+                VOLATILITY: '/trend/volatility'
+            },
+            SIMULATOR: {
+                CALCULATE: '/simulator/calculate',
+                OPTIMIZE: '/simulator/optimize',
+                MULTI_STOP: '/simulator/multi-stop'
+            }
+        };
+
+        // Estado da aplicação
+        let appState = {
+            currentFuelType: 'gasolina',
+            selectedCities: [],
+            trendChart: null,
+            isLoading: false
+        };
+
+        // ============================================
+        // FUNÇÕES UTILITÁRIAS
+        // ============================================
+
+        // Formatar números
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
+
+        function formatNumber(value, decimals = 0) {
+            return new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(value);
+        }
+
+        // Função de fetch com tratamento de erros
+        async function fetchAPI(endpoint, options = {}) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
+            try {
+                showNotification('Carregando dados...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                hideNotification();
+                return data;
+
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    showNotification('Tempo de conexão esgotado. Tente novamente.', 'error');
+                } else {
+                    showNotification('Erro ao conectar com o servidor. Tente novamente.', 'error');
+                }
+                
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+
+        // Notificações
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification show ${type}`;
+            
+            if (type !== 'info') {
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 5000);
+            }
+        }
+
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+        }
+
+        // ============================================
+        // PÁGINA 1: ONDE ABASTECER HOJE
+        // ============================================
+
+        async function loadTodayPage() {
+            showNotification('Carregando dados atualizados...', 'info');
+            
+            try {
+                // Carregar dados sumarizados
+                const summary = await fetchAPI(`${API_ENDPOINTS.TODAY.SUMMARY}?fuel_type=${appState.currentFuelType}`);
+                
+                if (!summary) {
+                    loadFallbackTodayData();
+                    return;
+                }
+
+                // Atualizar KPIs
+                updateTodayKPIs(summary);
+                
+                // Atualizar mapa
+                await updateMapData();
+                
+                // Atualizar ranking
+                updateRankingList(summary.ranking);
+                
+                showNotification('Dados atualizados com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao carregar página hoje:', error);
+                loadFallbackTodayData();
+            }
+        }
+
+        function updateTodayKPIs(summary) {
+            // Melhor preço
+            const bestPriceElement = document.querySelector('#todayKpis .kpi-value.success');
+            bestPriceElement.textContent = formatCurrency(summary.best_price.price);
+            
+            const bestLocationElement = document.getElementById('bestPriceLocation');
+            bestLocationElement.textContent = `📍 ${summary.best_price.city}, ${summary.best_price.state}`;
+            
+            // Atualizar badge do tipo de combustível
+            const fuelBadge = document.querySelector('#todayKpis .badge');
+            fuelBadge.textContent = appState.currentFuelType.charAt(0).toUpperCase() + appState.currentFuelType.slice(1);
+            
+            // Economia potencial
+            const savingElement = document.querySelectorAll('#todayKpis .kpi-value.success')[1];
+            savingElement.textContent = formatCurrency(summary.potential_saving);
+            
+            // Postos analisados
+            const stationsElement = document.querySelectorAll('#todayKpis .kpi-value')[2];
+            stationsElement.textContent = formatNumber(summary.total_stations);
+            
+            // Última atualização
+            const lastUpdateElement = document.getElementById('lastUpdate');
+            const updateDate = new Date(summary.analysis_date);
+            lastUpdateElement.textContent = updateDate.toLocaleDateString('pt-BR');
+            
+            const updateStatusElement = document.getElementById('updateStatus');
+            updateStatusElement.textContent = 'Dados Atualizados';
+            updateStatusElement.className = 'badge success';
+        }
+
+        async function updateMapData() {
+            try {
+                const regionsData = await fetchAPI(`${API_ENDPOINTS.TODAY.REGIONS}?fuel_type=${appState.currentFuelType}`);
+                
+                if (!regionsData || !Array.isArray(regionsData)) {
+                    return;
+                }
+                
+                // Calcular escala de cores
+                const prices = regionsData.map(r => r.avg_price);
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                const priceRange = maxPrice - minPrice;
+                
+                // Atualizar cores das regiões
+                regionsData.forEach(regionData => {
+                    const regionElement = document.querySelector(`.region[data-region="${regionData.region}"]`);
+                    if (regionElement) {
+                        // Calcular cor baseada no preço
+                        const normalizedPrice = (regionData.avg_price - minPrice) / priceRange;
+                        const hue = (1 - normalizedPrice) * 120; // Verde (120) a Vermelho (0)
+                        regionElement.style.fill = `hsl(${hue}, 70%, 50%)`;
+                        regionElement.dataset.price = regionData.avg_price.toFixed(2);
+                        regionElement.dataset.stations = regionData.stations_count;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erro ao atualizar mapa:', error);
+            }
+        }
+
+        function updateRankingList(ranking) {
+            const rankingList = document.getElementById('rankingList');
+            
+            if (!ranking || ranking.length === 0) {
+                rankingList.innerHTML = `
+                    <div class="ranking-item" style="text-align: center; padding: var(--spacing-xl); color: var(--color-text-tertiary);">
+                        Nenhum dado disponível para o tipo de combustível selecionado.
+                    </div>
+                `;
+                return;
+            }
+            
+            rankingList.innerHTML = '';
+            
+            ranking.forEach((item, index) => {
+                const rankingItem = document.createElement('div');
+                rankingItem.className = `ranking-item ${index === 0 ? 'top' : ''}`;
+                
+                rankingItem.innerHTML = `
+                    <div class="ranking-number">${item.rank}</div>
+                    <div class="ranking-info">
+                        <div class="ranking-city">${item.city}</div>
+                        <div class="ranking-state">${item.state}</div>
+                    </div>
+                    <div class="ranking-price">${formatCurrency(item.price)}</div>
+                `;
+                
+                rankingList.appendChild(rankingItem);
+            });
+        }
+
+        function loadFallbackTodayData() {
+            showNotification('Usando dados de exemplo. Conectando com servidor...', 'warning');
+            
+            // Dados de exemplo
+            const exampleData = {
+                best_price: {
+                    price: 4.89,
+                    city: 'POÇOS DE CALDAS',
+                    state: 'MG'
+                },
+                potential_saving: 0.87,
+                total_stations: 12847,
+                analysis_date: new Date().toISOString(),
+                ranking: [
+                    { rank: 1, city: 'POÇOS DE CALDAS', state: 'MG', price: 4.89 },
+                    { rank: 2, city: 'ITAÚNA', state: 'MG', price: 4.92 },
+                    { rank: 3, city: 'VARGINHA', state: 'MG', price: 4.95 },
+                    { rank: 4, city: 'CAMPINAS', state: 'SP', price: 4.98 },
+                    { rank: 5, city: 'RIBEIRÃO PRETO', state: 'SP', price: 5.01 },
+                    { rank: 6, city: 'UBERLÂNDIA', state: 'MG', price: 5.03 },
+                    { rank: 7, city: 'SÃO CARLOS', state: 'SP', price: 5.05 },
+                    { rank: 8, city: 'SOROCABA', state: 'SP', price: 5.07 },
+                    { rank: 9, city: 'LONDRINA', state: 'PR', price: 5.09 },
+                    { rank: 10, city: 'MARINGÁ', state: 'PR', price: 5.11 }
+                ]
+            };
+            
+            updateTodayKPIs(exampleData);
+            updateRankingList(exampleData.ranking);
+        }
+
+        // ============================================
+        // PÁGINA 2: COMPARAÇÃO DE CIDADES
+        // ============================================
+
+        async function loadComparePage() {
+            // Configurar busca
+            setupCitySearch();
+            
+            // Limpar comparação anterior
+            document.getElementById('comparisonGrid').innerHTML = '';
+            document.getElementById('selectedCities').style.display = 'none';
+            
+            // Atualizar card de recomendação
+            const decisionCard = document.getElementById('compareDecision');
+            decisionCard.innerHTML = `
+                <div class="decision-title">Recomendação</div>
+                <div class="decision-result">Selecione pelo menos duas cidades para comparação</div>
+                <div class="decision-diff">Digite os nomes acima e pressione Enter</div>
+                <div class="decision-explanation">O sistema comparará os preços médios, mínimos e máximos de cada cidade e indicará qual oferece a melhor economia.</div>
+            `;
+        }
+
+        function setupCitySearch() {
+            const searchInput = document.getElementById('citySearch');
+            const autocompleteList = document.getElementById('autocompleteList');
+            
+            // Limpar ao focar
+            searchInput.addEventListener('focus', () => {
+                searchInput.value = '';
+                autocompleteList.style.display = 'none';
+            });
+            
+            // Busca com debounce
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                if (query.length < 2) {
+                    autocompleteList.style.display = 'none';
+                    return;
+                }
+                
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const results = await fetchAPI(`${API_ENDPOINTS.TODAY.SEARCH}?query=${encodeURIComponent(query)}&limit=5`);
+                        
+                        if (results && results.length > 0) {
+                            autocompleteList.innerHTML = '';
+                            results.forEach(city => {
+                                const item = document.createElement('div');
+                                item.className = 'autocomplete-item';
+                                item.textContent = `${city.city}, ${city.state} (${formatCurrency(city.avg_price)})`;
+                                item.dataset.city = city.city;
+                                item.dataset.state = city.state;
+                                
+                                item.addEventListener('click', () => {
+                                    addCityToComparison(city.city);
+                                    searchInput.value = '';
+                                    autocompleteList.style.display = 'none';
+                                });
+                                
+                                autocompleteList.appendChild(item);
+                            });
+                            autocompleteList.style.display = 'block';
+                        } else {
+                            autocompleteList.style.display = 'none';
+                        }
+                    } catch (error) {
+                        console.error('Erro na busca:', error);
+                        autocompleteList.style.display = 'none';
+                    }
+                }, 300);
+            });
+            
+            // Adicionar cidade ao pressionar Enter
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const query = searchInput.value.trim();
+                    if (query.length >= 2) {
+                        addCityToComparison(query.toUpperCase());
+                        searchInput.value = '';
+                        autocompleteList.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Fechar autocomplete ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+        }
+
+        function addCityToComparison(cityName) {
+            if (appState.selectedCities.includes(cityName)) {
+                showNotification(`${cityName} já está na lista de comparação.`, 'warning');
+                return;
+            }
+            
+            appState.selectedCities.push(cityName);
+            updateCityTags();
+            
+            if (appState.selectedCities.length >= 2) {
+                compareSelectedCities();
+            }
+        }
+
+        function removeCityFromComparison(cityName) {
+            appState.selectedCities = appState.selectedCities.filter(city => city !== cityName);
+            updateCityTags();
+            
+            if (appState.selectedCities.length >= 2) {
+                compareSelectedCities();
+            } else {
+                // Atualizar card de recomendação
+                const decisionCard = document.getElementById('compareDecision');
+                decisionCard.innerHTML = `
+                    <div class="decision-title">Recomendação</div>
+                    <div class="decision-result">Selecione pelo menos duas cidades para comparação</div>
+                    <div class="decision-diff">${appState.selectedCities.length === 1 ? 'Adicione mais uma cidade' : 'Digite os nomes acima e pressione Enter'}</div>
+                    <div class="decision-explanation">O sistema comparará os preços médios, mínimos e máximos de cada cidade e indicará qual oferece a melhor economia.</div>
+                `;
+                
+                // Limpar grid de comparação
+                document.getElementById('comparisonGrid').innerHTML = '';
+            }
+        }
+
+        function updateCityTags() {
+            const cityTags = document.getElementById('cityTags');
+            const selectedCitiesSection = document.getElementById('selectedCities');
+            
+            if (appState.selectedCities.length === 0) {
+                selectedCitiesSection.style.display = 'none';
+                return;
+            }
+            
+            selectedCitiesSection.style.display = 'block';
+            cityTags.innerHTML = '';
+            
+            appState.selectedCities.forEach(city => {
+                const tag = document.createElement('button');
+                tag.className = 'filter-btn active';
+                tag.innerHTML = `${city} <span style="margin-left: 8px;">×</span>`;
+                tag.addEventListener('click', () => removeCityFromComparison(city));
+                cityTags.appendChild(tag);
+            });
+        }
+
+        async function compareSelectedCities() {
+            if (appState.selectedCities.length < 2) return;
+            
+            showNotification('Comparando cidades...', 'info');
+            
+            try {
+                // Obter comparação
+                const citiesParam = appState.selectedCities.join(',');
+                const comparison = await fetchAPI(`${API_ENDPOINTS.COMPARE.CITIES}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${appState.currentFuelType}`);
+                
+                if (!comparison || comparison.length < 2) {
+                    showNotification('Dados insuficientes para comparação.', 'error');
+                    return;
+                }
+                
+                // Obter recomendação
+                const recommendation = await fetchAPI(`${API_ENDPOINTS.COMPARE.RECOMMENDATION}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${appState.currentFuelType}`);
+                
+                // Atualizar interface
+                updateComparisonGrid(comparison);
+                updateComparisonDecision(recommendation);
+                
+                showNotification('Comparação concluída!', 'success');
+                
+            } catch (error) {
+                console.error('Erro na comparação:', error);
+                showNotification('Erro ao comparar cidades.', 'error');
+            }
+        }
+
+        function updateComparisonGrid(comparison) {
+            const grid = document.getElementById('comparisonGrid');
+            grid.innerHTML = '';
+            
+            // Encontrar melhor preço
+            const bestCity = comparison.reduce((best, current) => {
+                const currentPrice = current.fuels[appState.currentFuelType]?.avg;
+                const bestPrice = best.fuels[appState.currentFuelType]?.avg;
+                return currentPrice < bestPrice ? current : best;
+            });
+            
+            comparison.forEach(city => {
+                const fuelData = city.fuels[appState.currentFuelType];
+                if (!fuelData) return;
+                
+                const isWinner = city.city === bestCity.city;
+                
+                const card = document.createElement('div');
+                card.className = `comparison-card ${isWinner ? 'winner' : ''}`;
+                
+                if (isWinner) {
+                    card.innerHTML = `<div class="winner-badge">Melhor Opção</div>`;
+                }
+                
+                card.innerHTML += `
+                    <div class="comparison-city">${city.city}, ${city.state}</div>
+                    <div class="comparison-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Preço Médio</span>
+                            <span class="stat-value" style="color: ${isWinner ? 'var(--color-success)' : 'inherit'};">${formatCurrency(fuelData.avg)}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Preço Mínimo</span>
+                            <span class="stat-value" style="color: ${isWinner ? 'var(--color-success)' : 'inherit'};">${formatCurrency(fuelData.min)}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Preço Máximo</span>
+                            <span class="stat-value" style="color: ${fuelData.max > fuelData.avg * 1.1 ? 'var(--color-danger)' : 'inherit'};">${formatCurrency(fuelData.max)}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Postos Analisados</span>
+                            <span class="stat-value">${formatNumber(fuelData.stations)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function updateComparisonDecision(recommendation) {
+            if (!recommendation) return;
+            
+            const decisionCard = document.getElementById('compareDecision');
+            decisionCard.className = 'decision-card';
+            
+            decisionCard.innerHTML = `
+                <div class="decision-title">Recomendação</div>
+                <div class="decision-result">${recommendation.recommendation}</div>
+                <div class="decision-diff">Economia de ${formatCurrency(recommendation.savings.per_liter)} por litro (${recommendation.savings.percentage.toFixed(1)}% mais barato)</div>
+                <div class="decision-explanation">${recommendation.reason}. Em um tanque de 50 litros, a economia total seria de ${formatCurrency(recommendation.savings.per_50_liters)}.</div>
+            `;
+        }
+
+        // ============================================
+        // PÁGINA 3: TENDÊNCIA DE PREÇOS
+        // ============================================
+
+        async function loadTrendPage() {
+            showNotification('Analisando tendência de preços...', 'info');
+            
+            try {
+                // Obter análise de tendência
+                const analysis = await fetchAPI(`${API_ENDPOINTS.TREND.ANALYSIS}?fuel_type=${appState.currentFuelType}&lookback_days=90`);
+                
+                if (!analysis) {
+                    loadFallbackTrendData();
+                    return;
+                }
+                
+                // Obter histórico para gráfico
+                const history = await fetchAPI(`${API_ENDPOINTS.TREND.HISTORY}?fuel_type=${appState.currentFuelType}&days=30`);
+                
+                // Atualizar interface
+                updateTrendDecision(analysis);
+                updateTrendIndicators(analysis);
+                
+                if (history) {
+                    updateTrendChart(history);
+                }
+                
+                showNotification('Análise de tendência concluída!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao carregar página de tendência:', error);
+                loadFallbackTrendData();
+            }
+        }
+
+        function updateTrendDecision(analysis) {
+            const decisionCard = document.getElementById('trendDecision');
+            
+            // Definir cor baseada na recomendação
+            if (analysis.recommendation === 'abastecer_agora') {
+                decisionCard.className = 'decision-card danger';
+            } else {
+                decisionCard.className = 'decision-card success';
+            }
+            
+            decisionCard.innerHTML = `
+                <div class="decision-title">Recomendação Baseada em Dados</div>
+                <div class="decision-result">${analysis.recommendation === 'abastecer_agora' ? 'Abastecer Agora' : 'Pode Esperar'}</div>
+                <div class="decision-explanation">${analysis.reason} (Confiança: ${analysis.confidence_level.toFixed(1)}%)</div>
+            `;
+        }
+
+        function updateTrendIndicators(analysis) {
+            const indicators = document.getElementById('trendIndicators');
+            
+            // Variação
+            const variationIcon = indicators.querySelector('.indicator-icon.up');
+            const variationValue = indicators.querySelector('.indicator-value');
+            
+            variationIcon.textContent = analysis.trend_indicator > 0 ? '↗' : analysis.trend_indicator < 0 ? '↘' : '→';
+            variationIcon.className = `indicator-icon ${
+                analysis.trend_indicator > 5 ? 'up' : 
+                analysis.trend_indicator < -5 ? 'down' : 'stable'
+            }`;
+            
+            variationValue.textContent = `${analysis.trend_indicator > 0 ? '+' : ''}${analysis.trend_indicator.toFixed(1)}%`;
+            variationValue.style.color = analysis.trend_indicator > 0 ? 'var(--color-danger)' : 
+                                        analysis.trend_indicator < 0 ? 'var(--color-success)' : 
+                                        'var(--color-text-tertiary)';
+            
+            // Volatilidade
+            const volatilityValue = indicators.querySelectorAll('.indicator-value')[1];
+            volatilityValue.textContent = analysis.volatility < 0.05 ? 'Baixa' : 
+                                         analysis.volatility < 0.1 ? 'Média' : 'Alta';
+            
+            // Tendência
+            const trendValue = indicators.querySelectorAll('.indicator-value')[2];
+            trendValue.textContent = analysis.trend_direction === 'up' ? 'De Alta' :
+                                    analysis.trend_direction === 'down' ? 'De Baixa' : 'Estável';
+            trendValue.style.color = analysis.trend_direction === 'up' ? 'var(--color-danger)' :
+                                    analysis.trend_direction === 'down' ? 'var(--color-success)' :
+                                    'var(--color-text-tertiary)';
+        }
+
+        function updateTrendChart(historyData) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Destruir gráfico anterior se existir
+            if (appState.trendChart) {
+                appState.trendChart.destroy();
+            }
+            
+            // Preparar dados
+            const labels = historyData.history.map(h => {
+                const date = new Date(h.date);
+                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+            });
+            
+            const prices = historyData.history.map(h => h.price);
+            
+            // Determinar cor baseada na tendência
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const isRising = lastPrice > firstPrice;
+            
+            appState.trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Preço Médio (R$)',
+                        data: prices,
+                        borderColor: isRising ? '#E63946' : '#00A86B',
+                        backgroundColor: isRising ? 'rgba(230, 57, 70, 0.1)' : 'rgba(0, 168, 107, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: isRising ? '#E63946' : '#00A86B',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 10, 10, 0.95)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Preço: ${formatCurrency(context.parsed.y)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                },
+                                font: {
+                                    size: 12,
+                                    family: 'JetBrains Mono'
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadFallbackTrendData() {
+            showNotification('Usando análise de exemplo.', 'warning');
+            
+            // Dados de exemplo
+            const exampleAnalysis = {
+                current_price: 5.29,
+                volatility: 0.083,
+                recommendation: 'abastecer_agora',
+                reason: 'Os preços estão em tendência de alta nos últimos 3 meses, com aumento acumulado de 8.3%. A volatilidade está alta, indicando que os preços podem subir ainda mais nas próximas semanas.',
+                trend_indicator: 8.3,
+                confidence_level: 85.5,
+                trend_direction: 'up'
+            };
+            
+            updateTrendDecision(exampleAnalysis);
+            updateTrendIndicators(exampleAnalysis);
+        }
+
+        // ============================================
+        // PÁGINA 4: SIMULAÇÃO DE ROTA
+        // ============================================
+
+        function setupSimulatorPage() {
+            // Configurar event listeners
+            const tankCapacity = document.getElementById('tankCapacity');
+            const currentLevel = document.getElementById('currentLevel');
+            const consumption = document.getElementById('consumption');
+            const distance = document.getElementById('distance');
+            const calculateButton = document.getElementById('calculateTrip');
+            
+            // Atualizar visualização do tanque
+            function updateTankVisual() {
+                const level = currentLevel.value;
+                document.getElementById('levelValue').textContent = level + '%';
+                document.getElementById('tankFill').style.height = level + '%';
+                
+                const capacity = parseFloat(tankCapacity.value) || 50;
+                const liters = (capacity * level / 100).toFixed(1);
+                document.getElementById('tankLiters').textContent = liters;
+                
+                updateAutonomy();
+            }
+            
+            function updateAutonomy() {
+                const capacity = parseFloat(tankCapacity.value) || 50;
+                const level = parseFloat(currentLevel.value) || 0;
+                const cons = parseFloat(consumption.value) || 12;
+                
+                const currentLiters = capacity * level / 100;
+                const currentAutonomy = currentLiters * cons;
+                document.getElementById('autonomy').textContent = Math.round(currentAutonomy);
+            }
+            
+            // Event listeners
+            currentLevel.addEventListener('input', updateTankVisual);
+            tankCapacity.addEventListener('input', updateAutonomy);
+            consumption.addEventListener('input', updateAutonomy);
+            
+            // Botão de cálculo
+            calculateButton.addEventListener('click', calculateTrip);
+            
+            // Calcular inicial
+            updateTankVisual();
+        }
+
+        async function calculateTrip() {
+            showNotification('Calculando viabilidade da viagem...', 'info');
+            
+            try {
+                // Coletar dados do formulário
+                const tankCapacity = parseFloat(document.getElementById('tankCapacity').value);
+                const currentLevel = parseFloat(document.getElementById('currentLevel').value);
+                const consumption = parseFloat(document.getElementById('consumption').value);
+                const distance = parseFloat(document.getElementById('distance').value);
+                const fuelType = document.getElementById('simulatorFuelType').value;
+                const origin = document.getElementById('origin').value;
+                
+                // Extrair cidade da origem (se possível)
+                let city = null;
+                if (origin.includes(',')) {
+                    city = origin.split(',')[0].trim().toUpperCase();
+                }
+                
+                // Chamar API
+                const params = new URLSearchParams({
+                    tank_capacity: tankCapacity,
+                    current_level: currentLevel,
+                    consumption: consumption,
+                    distance: distance,
+                    fuel_type: fuelType
+                });
+                
+                if (city) {
+                    params.append('city', city);
+                }
+                
+                const result = await fetchAPI(`${API_ENDPOINTS.SIMULATOR.CALCULATE}?${params}`);
+                
+                if (!result) {
+                    showFallbackSimulation();
+                    return;
+                }
+                
+                // Atualizar resultado
+                updateTripResult(result);
+                
+                showNotification('Cálculo concluído!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao calcular viagem:', error);
+                showFallbackSimulation();
+            }
+        }
+
+        function updateTripResult(result) {
+            const tripResult = document.getElementById('tripResult');
+            
+            // Definir estilo baseado no status
+            tripResult.className = `result-card ${result.status}`;
+            
+            // Definir ícone
+            let icon = '⏳';
+            let title = 'Aguardando';
+            if (result.status === 'safe') {
+                icon = '✓';
+                title = 'Viagem Segura';
+            } else if (result.status === 'warning') {
+                icon = '⚠';
+                title = 'Chega na Reserva';
+            } else if (result.status === 'danger') {
+                icon = '✕';
+                title = 'Não É Possível Completar';
+            }
+            
+            // Atualizar conteúdo
+            tripResult.innerHTML = `
+                <div class="result-icon">${icon}</div>
+                <div class="result-title">${title}</div>
+                <div class="result-message">${result.message}</div>
+                ${result.estimated_cost ? `
+                    <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-border);">
+                        <div style="font-size: 14px; color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">
+                            Custo estimado do combustível necessário:
+                        </div>
+                        <div style="font-size: 24px; font-weight: 700; color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">
+                            ${formatCurrency(result.estimated_cost)}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function showFallbackSimulation() {
+            showNotification('Usando cálculo de exemplo.', 'warning');
+            
+            // Dados de exemplo
+            const exampleResult = {
+                current_autonomy: 360,
+                required_autonomy: 95,
+                remaining_liters: 22.1,
+                remaining_percent: 44.2,
+                fuel_needed: 7.9,
+                status: 'safe',
+                message: 'Você possui combustível suficiente para completar a viagem. Sua autonomia atual é de 360 km, e a distância até o destino é de 95 km. Você chegará ao destino com aproximadamente 22.1 litros no tanque (44% de capacidade).',
+                estimated_cost: 40.45,
+                safety_margin: 265.0
+            };
+            
+            updateTripResult(exampleResult);
+        }
+
+        // ============================================
+        // NAVEGAÇÃO E INICIALIZAÇÃO
+        // ============================================
+
+        // Navegação entre páginas
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('nav a');
+            const pages = document.querySelectorAll('.page');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+
+            // Navegação principal
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = link.getAttribute('data-page');
+                    
+                    // Atualizar navegação
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    pages.forEach(p => p.classList.remove('active'));
+                    
+                    link.classList.add('active');
+                    document.getElementById(pageId).classList.add('active');
+                    
+                    // Carregar dados da página
+                    setTimeout(() => {
+                        switch(pageId) {
+                            case 'today':
+                                loadTodayPage();
+                                break;
+                            case 'compare':
+                                loadComparePage();
+                                break;
+                            case 'trend':
+                                loadTrendPage();
+                                break;
+                            case 'simulator':
+                                setupSimulatorPage();
+                                break;
+                        }
+                    }, 100);
+                });
+            });
+
+            // Filtros de tipo de combustível
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Atualizar botões ativos
+                    const parent = btn.closest('.filter-options');
+                    if (parent) {
+                        parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    }
+                    btn.classList.add('active');
+                    
+                    // Atualizar tipo de combustível
+                    const fuelType = btn.getAttribute('data-fuel');
+                    if (fuelType) {
+                        appState.currentFuelType = fuelType;
+                        
+                        // Recarregar dados da página atual
+                        const activePage = document.querySelector('.page.active').id;
+                        switch(activePage) {
+                            case 'today':
+                                loadTodayPage();
+                                break;
+                            case 'trend':
+                                loadTrendPage();
+                                break;
+                        }
+                    }
+                });
+            });
+
+            // Tooltip do mapa
+            const regions = document.querySelectorAll('.region');
+            const tooltip = document.getElementById('mapTooltip');
+
+            regions.forEach(region => {
+                region.addEventListener('mouseenter', (e) => {
+                    const regionName = region.getAttribute('data-region');
+                    const price = region.getAttribute('data-price');
+                    const stations = region.getAttribute('data-stations');
+                    
+                    if (price && stations) {
+                        tooltip.innerHTML = `
+                            <strong>${regionName}</strong><br>
+                            Preço médio: ${formatCurrency(parseFloat(price))}<br>
+                            Postos analisados: ${parseInt(stations).toLocaleString('pt-BR')}
+                        `;
+                        tooltip.classList.add('active');
+                    }
+                });
+
+                region.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = e.pageX + 15 + 'px';
+                    tooltip.style.top = e.pageY + 15 + 'px';
+                });
+
+                region.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('active');
+                });
+            });
+        }
+
+        // Inicialização da aplicação
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar navegação
+            setupNavigation();
+            
+            // Carregar página inicial
+            loadTodayPage();
+            
+            // Configurar atualização periódica (a cada 5 minutos)
+            setInterval(() => {
+                const activePage = document.querySelector('.page.active').id;
+                if (activePage === 'today') {
+                    loadTodayPage();
+                }
+            }, 5 * 60 * 1000);
+            
+            // Verificar conexão
+            checkConnection();
+        });
+
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    console.log('Conexão com API estabelecida');
+                }
+            } catch (error) {
+                console.warn('API não disponível, usando dados locais');
+            }
+        }
+    </script>
+</body>
+</html>

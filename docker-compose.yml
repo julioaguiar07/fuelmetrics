@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///./fuelmetrics.db
+      - CACHE_TTL=3600
+      - ANP_UPDATE_INTERVAL_DAYS=7
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    networks:
+      - fuelmetrics-network
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend
+    networks:
+      - fuelmetrics-network
+
+networks:
+  fuelmetrics-network:
+    driver: bridge
