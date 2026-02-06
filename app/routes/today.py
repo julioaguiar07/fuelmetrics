@@ -290,3 +290,23 @@ async def search_cities(
     except Exception as e:
         logger.error(f"Erro em /search: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+
+@router.get("/debug-data")
+async def debug_data():
+    """Endpoint para debug dos dados"""
+    try:
+        processor = get_processor()
+        df = processor.df
+        
+        return {
+            "total_records": len(df),
+            "columns": list(df.columns),
+            "sample_records": df.head(5).to_dict('records'),
+            "column_types": df.dtypes.astype(str).to_dict(),
+            "unique_products": df['produto_consolidado'].unique().tolist() if 'produto_consolidado' in df.columns else [],
+            "price_column_exists": 'preco_medio_revenda' in df.columns
+        }
+    except Exception as e:
+        logger.error(f"Erro em /debug-data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
