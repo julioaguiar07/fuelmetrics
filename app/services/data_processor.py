@@ -161,16 +161,16 @@ class DataProcessor:
             # Filtrar produtos relevantes
             valid_products = [
                 'GASOLINA', 'GASOLINA COMUM', 'GASOLINA ADITIVADA',
+                'OLEO DIESEL', 'ÓLEO DIESEL',  
+                'OLEO DIESEL S10', 'ÓLEO DIESEL S10',  
                 'DIESEL', 'DIESEL S10', 'DIESEL S500', 
-                'GNV', 'GAS NATURAL VEICULAR', 'ETANOL', 'ALCOOL'
+                'GNV', 'GAS NATURAL VEICULAR', 
+                'ETANOL', 'ETANOL HIDRATADO', 'ALCOOL'
             ]
             
             self.df = self.df[self.df['PRODUTO'].isin(valid_products)]
-
             
-            # Consolidar tipos similares
-            # Primeiro, normalizar os nomes dos produtos
-            self.df['PRODUTO'] = self.df['PRODUTO'].astype(str).str.strip().str.upper()
+            # E depois, substitua o product_mapping:
             
             product_mapping = {
                 'GASOLINA': 'GASOLINA',
@@ -179,15 +179,16 @@ class DataProcessor:
                 'ETANOL HIDRATADO': 'ETANOL',  
                 'ETANOL': 'ETANOL',
                 'ÓLEO DIESEL': 'DIESEL',  
+                'OLEO DIESEL': 'DIESEL',  
                 'ÓLEO DIESEL S10': 'DIESEL_S10',  
-                'ÓLEO_DIESEL': 'DIESEL',  # AQUI!
-                'ÓLEO_DIESEL_S10': 'DIESEL_S10',  # AQUI!
+                'OLEO DIESEL S10': 'DIESEL_S10',  
                 'DIESEL': 'DIESEL',
                 'DIESEL S10': 'DIESEL_S10',
                 'GNV': 'GNV',
-                'GÁS NATURAL VEICULAR': 'GNV'
+                'GÁS NATURAL VEICULAR': 'GNV',
+                'GAS NATURAL VEICULAR': 'GNV'
             }
-            # Criar coluna produto_consolidado
+                        # Criar coluna produto_consolidado
             self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
                 lambda x: product_mapping.get(x, x)
             )
