@@ -193,11 +193,40 @@ class ANPDownloader:
             logger.info(f"Usando aba: {sheet_name}")
             
             # Ler dados
+            # Primeiro, vamos descobrir onde começa os dados
+            temp_df = pd.read_excel(filepath, sheet_name=sheet_name, header=None, nrows=20)
+            
+            # Encontrar a linha que contém "MÊS" (cabeçalho real)
+            header_row = None
+            for i in range(len(temp_df)):
+                row_values = temp_df.iloc[i].astype(str).str.strip().tolist()
+                if 'MÊS' in row_values:
+                    header_row = i
+                    break
+            
+            if header_row is None:
+                # Se não encontrar, tentar encontrar "MUNICÍPIO"
+                for i in range(len(temp_df)):
+                    row_values = temp_df.iloc[i].astype(str).str.strip().tolist()
+                    if 'MUNICÍPIO' in row_values:
+                        header_row = i
+                        break
+            
+            if header_row is None:
+                header_row = 0  # Fallback: usar primeira linha como cabeçalho
+                
+            logger.info(f"Cabeçalho encontrado na linha: {header_row}")
+            
+            # Agora ler os dados a partir da linha do cabeçalho
             df = pd.read_excel(
                 filepath,
                 sheet_name=sheet_name,
+                header=header_row,
                 dtype={'PREÇO MÉDIO REVENDA': 'float64'}
             )
+            
+            # Remover linhas completamente vazias
+            df = df.dropna(how='all')
             
             logger.info(f"Dados lidos: {len(df)} linhas, {len(df.columns)} colunas")
             logger.info(f"Colunas originais: {list(df.columns)}")
