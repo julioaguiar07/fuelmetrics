@@ -163,7 +163,7 @@ class ANPDownloader:
             
         except Exception as e:
             logger.error(f"Erro ao salvar metadados: {e}")
-    
+        
     def _calculate_file_hash(self, filepath: Path) -> str:
         """Calcula hash do arquivo para verificação de integridade"""
         try:
@@ -178,191 +178,230 @@ class ANPDownloader:
             return ""
 
     
-# NOVO MÉTODO load_data - substitua o método atual pelo abaixo:
-
-def load_data(self):
-    """Carrega dados do Excel para DataFrame - VERSÃO CORRIGIDA"""
-    filepath = self.download_file()
-    
-    try:
-        logger.info("=" * 60)
-        logger.info("INÍCIO DO PROCESSAMENTO DO EXCEL")
-        logger.info("=" * 60)
+    def load_data(self):
+        """Carrega dados do Excel para DataFrame - VERSÃO FINAL CORRIGIDA"""
+        filepath = self.download_file()
         
-        # MÉTODO 1: Ler TUDO sem cabeçalho
-        logger.info("Método 1: Lendo tudo sem cabeçalho...")
-        df_all = pd.read_excel(filepath, sheet_name=0, header=None)
-        logger.info(f"Total de linhas brutas: {len(df_all)}")
-        logger.info(f"Total de colunas brutas: {len(df_all.columns)}")
-        
-        # Procurar a linha que tem "MÊS" - que é o cabeçalho no SEU arquivo
-        header_row = None
-        for i in range(min(30, len(df_all))):
-            linha_str = ' '.join(df_all.iloc[i].fillna('').astype(str).str.strip().str.upper())
-            if 'MÊS' in linha_str or 'MES' in linha_str:
-                header_row = i
-                logger.info(f"Cabeçalho encontrado na linha {header_row}: {linha_str[:200]}...")
-                break
-        
-        if header_row is None:
-            # Tentativa alternativa
-            for i in range(min(30, len(df_all))):
+        try:
+            logger.info("=" * 60)
+            logger.info("INÍCIO DO PROCESSAMENTO DO EXCEL")
+            logger.info("=" * 60)
+            
+            # MÉTODO 1: Ler TUDO sem cabeçalho para debug
+            logger.info("Método 1: Lendo tudo sem cabeçalho...")
+            df_all = pd.read_excel(filepath, sheet_name=0, header=None)
+            logger.info(f"Total de linhas brutas: {len(df_all)}")
+            logger.info(f"Total de colunas brutas: {len(df_all.columns)}")
+            
+            # Procurar a linha que tem "DATA INICIAL" - que é o cabeçalho real
+            header_row = None
+            for i in range(min(20, len(df_all))):
                 linha_str = ' '.join(df_all.iloc[i].fillna('').astype(str).str.strip().str.upper())
-                if 'PRODUTO' in linha_str and 'REGIÃO' in linha_str:
+                if 'DATA INICIAL' in linha_str or 'DATA_INICIAL' in linha_str:
                     header_row = i
-                    logger.info(f"Cabeçalho alternativo na linha {header_row}")
+                    logger.info(f"Cabeçalho encontrado na linha {header_row}: {linha_str[:200]}...")
                     break
-        
-        if header_row is None:
-            header_row = 0
-            logger.warning(f"Cabeçalho não encontrado, usando linha 0")
-        
-        # MÉTODO 2: Ler com o cabeçalho encontrado
-        logger.info(f"\nMétodo 2: Lendo com header={header_row}...")
-        df = pd.read_excel(filepath, sheet_name=0, header=header_row)
-        
-        logger.info(f"DataFrame shape: {df.shape}")
-        logger.info(f"Colunas: {list(df.columns)}")
-        
-        # REMOVER: Mostrar estrutura - isso já está no seu log original
-        
-        # Remover linhas completamente vazias
-        df = df.dropna(how='all')
-        logger.info(f"Após remover vazias: {len(df)} linhas")
-        
-        # **CRÍTICO: Normalizar nomes das colunas BASEADO NO SEU ARQUIVO**
-        # Seu arquivo tem: MÊS, PRODUTO, REGIÃO, ESTADO, MUNICÍPIO, NÚMERO DE POSTOS PESQUISADOS, etc.
-        
-        # Converter todas as colunas para string e remover espaços
-        df.columns = [str(col).strip() for col in df.columns]
-        
-        # **Mapeamento ESPECÍFICO para sua estrutura**
-        column_mapping = {}
-        for col in df.columns:
-            col_str = str(col).upper().strip()
             
-            # Mapeamento exato baseado no seu exemplo
-            if col_str == 'MÊS' or col_str == 'MES':
-                column_mapping[col] = 'DATA_INICIAL'
-            elif 'PRODUTO' in col_str:
-                column_mapping[col] = 'PRODUTO'
-            elif 'REGIÃO' in col_str or 'REGIAO' in col_str:
-                column_mapping[col] = 'REGIAO'
-            elif 'ESTADO' in col_str:
-                column_mapping[col] = 'ESTADO'
-            elif 'MUNICÍPIO' in col_str or 'MUNICIPIO' in col_str:
-                column_mapping[col] = 'MUNICIPIO'
-            elif 'NÚMERO' in col_str and 'POSTOS' in col_str:
-                column_mapping[col] = 'NUMERO_DE_POSTOS_PESQUISADOS'
-            elif 'UNIDADE' in col_str and 'MEDIDA' in col_str:
-                column_mapping[col] = 'UNIDADE_DE_MEDIDA'
-            elif 'PREÇO MÉDIO REVENDA' in col_str or 'PRECO MEDIO REVENDA' in col_str:
-                column_mapping[col] = 'PRECO_MEDIO_REVENDA'
-            elif 'DESVIO PADRÃO REVENDA' in col_str or 'DESVIO PADRAO REVENDA' in col_str:
-                column_mapping[col] = 'DESVIO_PADRAO_REVENDA'
-            elif 'PREÇO MÍNIMO REVENDA' in col_str or 'PRECO MINIMO REVENDA' in col_str:
-                column_mapping[col] = 'PRECO_MINIMO_REVENDA'
-            elif 'PREÇO MÁXIMO REVENDA' in col_str or 'PRECO MAXIMO REVENDA' in col_str:
-                column_mapping[col] = 'PRECO_MAXIMO_REVENDA'
-            elif 'COEF' in col_str and 'VARIAÇÃO' in col_str:
-                column_mapping[col] = 'COEF_DE_VARIACAO_REVENDA'
-            else:
-                # Manter original mas limpar
-                new_name = col_str.replace(' ', '_').replace('Ç', 'C').replace('Ã', 'A')
-                column_mapping[col] = new_name
-        
-        df = df.rename(columns=column_mapping)
-        logger.info(f"Colunas após mapeamento: {list(df.columns)}")
-        
-        # **CRÍTICO: Processar a coluna MÊS (jan/26)**
-        if 'DATA_INICIAL' in df.columns:
-            # Converter formato "jan/26" para data
-            def parse_month_year(value):
-                try:
-                    if pd.isna(value):
-                        return pd.NaT
-                    
-                    value_str = str(value).lower().strip()
-                    
-                    # Se já é uma data, retornar
-                    if isinstance(value, (datetime, pd.Timestamp)):
-                        return value
-                    
-                    # Formato "jan/26"
-                    if '/' in value_str:
-                        month_str, year_str = value_str.split('/')
-                        
-                        # Mapear mês
-                        month_map = {
-                            'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6,
-                            'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12
-                        }
-                        
-                        month = month_map.get(month_str[:3].lower(), 1)
-                        year = int('20' + year_str) if len(year_str) == 2 else int(year_str)
-                        
-                        # Criar data como primeiro dia do mês
-                        return datetime(year, month, 1)
-                    
-                    return pd.NaT
-                except:
-                    return pd.NaT
+            if header_row is None:
+                # Tentativa alternativa - procurar por outras colunas chave
+                for i in range(min(20, len(df_all))):
+                    linha_str = ' '.join(df_all.iloc[i].fillna('').astype(str).str.strip().str.upper())
+                    matches = 0
+                    if 'MUNICÍPIO' in linha_str or 'MUNICIPIO' in linha_str:
+                        matches += 1
+                    if 'PRODUTO' in linha_str:
+                        matches += 1
+                    if 'ESTADO' in linha_str:
+                        matches += 1
+                    if matches >= 2:
+                        header_row = i
+                        logger.info(f"Cabeçalho alternativo na linha {header_row} ({matches} matches)")
+                        break
             
-            df['DATA_INICIAL'] = df['DATA_INICIAL'].apply(parse_month_year)
-            # Criar DATA_FINAL como último dia do mês
-            df['DATA_FINAL'] = df['DATA_INICIAL'] + pd.offsets.MonthEnd(0)
-        
-        # **CRÍTICO: Garantir que PRODUTO está em maiúsculas**
-        if 'PRODUTO' in df.columns:
-            df['PRODUTO'] = df['PRODUTO'].astype(str).str.upper().str.strip()
-            logger.info(f"Produtos únicos encontrados: {df['PRODUTO'].unique()[:10]}")
-        
-        # **CRÍTICO: Converter preços (notar que no Brasil usa vírgula como decimal)**
-        if 'PRECO_MEDIO_REVENDA' in df.columns:
-            # Primeiro tentar converter diretamente
+            if header_row is None:
+                # Última tentativa: pular linhas baseado na estrutura
+                for i in range(5, 15):
+                    linha = df_all.iloc[i].fillna('').astype(str).str.strip().tolist()
+                    if len(linha) >= 10 and any('DIESEL' in cell.upper() for cell in linha):
+                        header_row = 10  # Assume que o cabeçalho está na linha 10
+                        logger.info(f"Usando header padrão na linha {header_row}")
+                        break
+            
+            if header_row is None:
+                header_row = 10  # Default baseado na estrutura comum
+                logger.warning(f"Cabeçalho não encontrado, usando linha {header_row}")
+            
+            # MÉTODO 2: Ler com o cabeçalho encontrado
+            logger.info(f"\nMétodo 2: Lendo com header={header_row}...")
             try:
-                df['PRECO_MEDIO_REVENDA'] = pd.to_numeric(df['PRECO_MEDIO_REVENDA'], errors='coerce')
-            except:
-                # Se falhar, pode ser string com vírgula
-                df['PRECO_MEDIO_REVENDA'] = df['PRECO_MEDIO_REVENDA'].astype(str).str.replace(',', '.').astype(float)
-        
-        # Converter outras colunas numéricas
-        numeric_columns = ['NUMERO_DE_POSTOS_PESQUISADOS', 'PRECO_MINIMO_REVENDA', 
-                          'PRECO_MAXIMO_REVENDA', 'DESVIO_PADRAO_REVENDA', 
-                          'COEF_DE_VARIACAO_REVENDA']
-        
-        for col in numeric_columns:
-            if col in df.columns:
-                try:
-                    df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce')
-                except:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Converter strings para maiúsculas
-        for col in ['PRODUTO', 'ESTADO', 'MUNICIPIO', 'REGIAO']:
-            if col in df.columns:
-                df[col] = df[col].astype(str).str.upper().str.strip()
-        
-        # **REMOVER dados de exemplo - NÃO PRECISAMOS DELES**
-        # Se tem menos de 100 registros, algo está errado
-        if len(df) < 100:
-            logger.error(f"POUCOS DADOS: apenas {len(df)} registros")
-            # Mostrar primeiros registros para debug
-            logger.info(f"Primeiros registros: {df[['PRODUTO', 'MUNICIPIO', 'PRECO_MEDIO_REVENDA']].head(10).to_dict('records')}")
-        
-        logger.info(f"Dados finais: {len(df)} registros")
-        logger.info(f"Produtos encontrados: {df['PRODUTO'].unique() if 'PRODUTO' in df.columns else []}")
-        
-        logger.info("=" * 60)
-        logger.info("FIM DO PROCESSAMENTO")
-        logger.info("=" * 60)
-        
-        return df
-        
-    except Exception as e:
-        logger.error(f"ERRO CRÍTICO no load_data: {e}", exc_info=True)
-        # NÃO criar dados de exemplo - deixar falhar para ver o erro
-        raise
+                df = pd.read_excel(filepath, sheet_name=0, header=header_row)
+            except Exception as e:
+                logger.error(f"Erro ao ler Excel com header={header_row}: {e}")
+                # Tentar ler sem header e processar manualmente
+                df = pd.read_excel(filepath, sheet_name=0)
+                # Remover as primeiras linhas manualmente
+                df = df.iloc[header_row:]
+                df.columns = df.iloc[0]  # Primeira linha como header
+                df = df.iloc[1:]
+            
+            logger.info(f"DataFrame shape: {df.shape}")
+            logger.info(f"Colunas originais: {list(df.columns)}")
+            
+            # Remover linhas completamente vazias
+            df = df.dropna(how='all')
+            logger.info(f"Após remover vazias: {len(df)} linhas")
+            
+            # **CRÍTICO: Normalizar nomes das colunas para a estrutura REAL**
+            # Seu arquivo real tem: DATA INICIAL, DATA FINAL, REGIÃO, ESTADO, MUNICÍPIO, PRODUTO, etc.
+            
+            # Converter todas as colunas para string e remover espaços
+            df.columns = [str(col).strip() for col in df.columns]
+            
+            # **Mapeamento para estrutura SEMANAL**
+            column_mapping = {}
+            for col in df.columns:
+                col_str = str(col).upper().strip()
+                
+                # Mapeamento baseado na estrutura REAL
+                if 'DATA INICIAL' in col_str or 'DATA_INICIAL' in col_str:
+                    column_mapping[col] = 'DATA_INICIAL'
+                elif 'DATA FINAL' in col_str or 'DATA_FINAL' in col_str:
+                    column_mapping[col] = 'DATA_FINAL'
+                elif 'REGIÃO' in col_str or 'REGIAO' in col_str:
+                    column_mapping[col] = 'REGIAO'
+                elif 'ESTADO' in col_str:
+                    column_mapping[col] = 'ESTADO'
+                elif 'MUNICÍPIO' in col_str or 'MUNICIPIO' in col_str:
+                    column_mapping[col] = 'MUNICIPIO'
+                elif 'PRODUTO' in col_str:
+                    column_mapping[col] = 'PRODUTO'
+                elif 'NÚMERO' in col_str and 'POSTOS' in col_str:
+                    column_mapping[col] = 'NUMERO_DE_POSTOS_PESQUISADOS'
+                elif 'UNIDADE' in col_str and 'MEDIDA' in col_str:
+                    column_mapping[col] = 'UNIDADE_DE_MEDIDA'
+                elif 'PREÇO MÉDIO' in col_str or 'PRECO MEDIO' in col_str:
+                    if 'REVENDA' in col_str:
+                        column_mapping[col] = 'PRECO_MEDIO_REVENDA'
+                    else:
+                        column_mapping[col] = 'PRECO_MEDIO_REVENDA'  # Default
+                elif 'DESVIO' in col_str and 'PADRÃO' in col_str:
+                    column_mapping[col] = 'DESVIO_PADRAO_REVENDA'
+                elif 'PREÇO MÍNIMO' in col_str or 'PRECO MINIMO' in col_str:
+                    column_mapping[col] = 'PRECO_MINIMO_REVENDA'
+                elif 'PREÇO MÁXIMO' in col_str or 'PRECO MAXIMO' in col_str:
+                    column_mapping[col] = 'PRECO_MAXIMO_REVENDA'
+                elif 'COEF' in col_str and 'VARIAÇÃO' in col_str:
+                    column_mapping[col] = 'COEF_DE_VARIACAO_REVENDA'
+                elif 'MARGEM' in col_str and 'MÉDIA' in col_str:
+                    column_mapping[col] = 'MARGEM_MEDIA_REVENDA'
+                else:
+                    # Manter original mas limpar
+                    new_name = col_str.replace(' ', '_').replace('Ç', 'C').replace('Ã', 'A')
+                    new_name = new_name.replace('Á', 'A').replace('É', 'E').replace('Í', 'I')
+                    new_name = new_name.replace('Ó', 'O').replace('Ú', 'U').replace('Ô', 'O')
+                    new_name = new_name.replace('Ê', 'E').replace('Â', 'A')
+                    column_mapping[col] = new_name
+            
+            df = df.rename(columns=column_mapping)
+            logger.info(f"Colunas após mapeamento: {list(df.columns)}")
+            
+            # **CRÍTICO: Processar datas**
+            date_columns = ['DATA_INICIAL', 'DATA_FINAL']
+            for col in date_columns:
+                if col in df.columns:
+                    try:
+                        # Tentar converter para datetime
+                        df[col] = pd.to_datetime(df[col], errors='coerce')
+                    except Exception as e:
+                        logger.warning(f"Erro ao converter {col}: {e}")
+                        # Tentar formato específico dd/mm/yyyy
+                        try:
+                            df[col] = pd.to_datetime(df[col], format='%d/%m/%Y', errors='coerce')
+                        except:
+                            logger.error(f"Não foi possível converter {col}")
+            
+            # **CRÍTICO: Garantir que PRODUTO está em maiúsculas e limpo**
+            if 'PRODUTO' in df.columns:
+                df['PRODUTO'] = df['PRODUTO'].astype(str).str.upper().str.strip()
+                # Mostrar produtos únicos para debug
+                produtos_unicos = df['PRODUTO'].unique()
+                logger.info(f"Produtos únicos encontrados ({len(produtos_unicos)}): {produtos_unicos[:20]}")
+                
+                # Verificar se tem diesel
+                tem_diesel = any('DIESEL' in str(p) for p in produtos_unicos)
+                logger.info(f"Contém DIESEL? {tem_diesel}")
+                
+                # Verificar se tem diesel S10
+                tem_diesel_s10 = any('S10' in str(p) for p in produtos_unicos)
+                logger.info(f"Contém DIESEL S10? {tem_diesel_s10}")
+            
+            # **CRÍTICO: Converter preços (Brasil usa vírgula como decimal)**
+            price_columns = ['PRECO_MEDIO_REVENDA', 'PRECO_MINIMO_REVENDA', 
+                            'PRECO_MAXIMO_REVENDA', 'DESVIO_PADRAO_REVENDA',
+                            'COEF_DE_VARIACAO_REVENDA']
+            
+            for col in price_columns:
+                if col in df.columns:
+                    try:
+                        # Primeiro tentar converter diretamente
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    except:
+                        # Se falhar, pode ser string com vírgula como decimal
+                        try:
+                            df[col] = df[col].astype(str).str.replace(',', '.').astype(float)
+                        except:
+                            logger.warning(f"Não foi possível converter {col}")
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Converter número de postos para inteiro
+            if 'NUMERO_DE_POSTOS_PESQUISADOS' in df.columns:
+                df['NUMERO_DE_POSTOS_PESQUISADOS'] = pd.to_numeric(df['NUMERO_DE_POSTOS_PESQUISADOS'], errors='coerce').fillna(0).astype(int)
+            
+            # Remover linhas sem preço
+            initial_count = len(df)
+            if 'PRECO_MEDIO_REVENDA' in df.columns:
+                df = df.dropna(subset=['PRECO_MEDIO_REVENDA'])
+                df = df[df['PRECO_MEDIO_REVENDA'] > 0]
+            if 'PRODUTO' in df.columns:
+                df = df[~df['PRODUTO'].isin(['', 'NAN', 'NONE', 'NULL'])]
+            
+            removed_count = initial_count - len(df)
+            if removed_count > 0:
+                logger.info(f"Removidas {removed_count} linhas inválidas")
+            
+            # Converter outras strings para maiúsculas
+            for col in ['ESTADO', 'MUNICIPIO', 'REGIAO']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str).str.upper().str.strip()
+            
+            # **IMPORTANTE: Verificar se temos dados**
+            logger.info(f"\n=== RESUMO FINAL ===")
+            logger.info(f"Total de registros: {len(df)}")
+            
+            if 'PRODUTO' in df.columns and len(df) > 0:
+                produtos_finais = df['PRODUTO'].unique()
+                logger.info(f"Produtos no dataset final ({len(produtos_finais)}):")
+                for produto in produtos_finais:
+                    count = len(df[df['PRODUTO'] == produto])
+                    logger.info(f"  - {produto}: {count} registros")
+            
+            # Verificar colunas essenciais
+            essential_cols = ['PRODUTO', 'MUNICIPIO', 'ESTADO', 'PRECO_MEDIO_REVENDA']
+            missing_cols = [col for col in essential_cols if col not in df.columns]
+            if missing_cols:
+                logger.error(f"Colunas essenciais faltando: {missing_cols}")
+                logger.info(f"Colunas disponíveis: {list(df.columns)}")
+            
+            logger.info("=" * 60)
+            logger.info("FIM DO PROCESSAMENTO")
+            logger.info("=" * 60)
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"ERRO CRÍTICO no load_data: {e}", exc_info=True)
+            # NÃO criar dados de exemplo - levantar erro para debug
+            raise
     
     def _create_sample_data(self):
         """Cria dados de exemplo quando não consegue ler o arquivo"""
