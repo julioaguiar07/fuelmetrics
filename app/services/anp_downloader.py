@@ -291,6 +291,11 @@ class ANPDownloader:
             df = df.rename(columns=column_mapping)
             logger.info(f"Colunas após mapeamento: {list(df.columns)}")
             
+            # CORREÇÃO CRÍTICA: Remover espaços dos nomes das colunas
+            logger.info("Removendo espaços dos nomes das colunas...")
+            df.columns = [col.replace(' ', '_') for col in df.columns]
+            logger.info(f"Colunas após remover espaços: {list(df.columns)}")
+            
             # Se PRECO_MEDIO_REVENDA não existe, procurar qualquer coluna de preço
             if 'PRECO_MEDIO_REVENDA' not in df.columns:
                 for col in df.columns:
