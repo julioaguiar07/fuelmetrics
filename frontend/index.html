@@ -891,6 +891,17 @@
             background: var(--color-danger-light);
         }
 
+        /* ============================================
+           MENU MOBILE - SOLUÇÃO SIMPLES
+           ============================================ */
+        
+        /* Menu desktop (visível em telas grandes) */
+        .desktop-nav {
+            display: flex;
+            gap: var(--spacing-xl);
+        }
+        
+        /* Botão hamburger */
         .menu-toggle {
             display: none;
             flex-direction: column;
@@ -924,9 +935,106 @@
         .menu-toggle.active span:nth-child(3) {
             transform: translateY(-9px) rotate(-45deg);
         }
-
         
-        /* Responsive */
+        /* Menu mobile overlay (cobre tela toda) */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            z-index: 9999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        .mobile-menu-content {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-2xl);
+        }
+        
+        /* Botão X para fechar */
+        .close-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            font-size: 30px;
+            color: var(--color-text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            z-index: 10000;
+        }
+        
+        .close-menu:hover {
+            background: var(--color-danger);
+            color: white;
+            border-color: var(--color-danger);
+            transform: rotate(90deg);
+        }
+        
+        /* Links do menu mobile */
+        .mobile-links {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .mobile-links a {
+            display: block;
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            background: var(--color-surface);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .mobile-links a:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--color-success);
+            background: var(--color-success-light);
+        }
+        
+        .mobile-links a.active {
+            background: var(--color-success);
+            color: white;
+            border-color: var(--color-success);
+            box-shadow: 0 8px 24px rgba(0, 168, 107, 0.3);
+        }
+        
+        /* ============================================
+           RESPONSIVIDADE
+           ============================================ */
+        
         @media (max-width: 1024px) {
             .map-section {
                 grid-template-columns: 1fr;
@@ -938,65 +1046,14 @@
         }
         
         @media (max-width: 768px) {
-            /* Menu hamburger visível em mobile */
+            /* Esconder menu desktop em mobile */
+            .desktop-nav {
+                display: none;
+            }
+            
+            /* Mostrar botão hamburger em mobile */
             .menu-toggle {
                 display: flex;
-            }
-            
-            /* Menu oculto por padrão, visível quando ativo - CORRIGIDO */
-            nav {
-                position: fixed;
-                top: 0; /* Começa do topo da tela */
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: var(--color-surface);
-                backdrop-filter: blur(20px);
-                flex-direction: column;
-                justify-content: center; /* Centraliza verticalmente */
-                align-items: center;
-                gap: var(--spacing-xl);
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-                z-index: 1001; /* Acima do header */
-                padding: var(--spacing-xl);
-                display: flex !important;
-                overflow-y: auto;
-                margin-top: 0;
-            }
-            
-            nav.active {
-                transform: translateX(0);
-            }
-            
-            nav a {
-                font-size: 18px; /* Texto maior */
-                padding: var(--spacing-lg) var(--spacing-xl);
-                width: 80%; /* Largura de 80% */
-                max-width: 300px;
-                text-align: center;
-                border-radius: var(--radius-md);
-                background: var(--color-neutral);
-                color: var(--color-text-primary);
-                border: 1px solid var(--color-border);
-                box-shadow: var(--shadow-md);
-            }
-            
-            nav a:hover {
-                background: var(--color-success-light);
-                border-color: var(--color-success);
-                transform: translateY(-2px);
-            }
-            
-            nav a.active {
-                background: var(--color-success);
-                color: white;
-                border-color: var(--color-success);
-                box-shadow: 0 4px 12px rgba(0, 168, 107, 0.3);
-            }
-            
-            nav a.active::after {
-                display: none;
             }
             
             /* Ajustes do conteúdo principal */
@@ -1012,19 +1069,23 @@
                 grid-template-columns: 1fr;
             }
             
-            /* Ajuste do título principal */
             h1 {
                 font-size: 28px !important;
             }
             
-            /* Ajuste do container do header para mobile */
             header .container {
                 padding: 0 var(--spacing-md);
             }
+        }
+        
+        @media (min-width: 769px) {
+            /* Esconder menu mobile em desktop */
+            .mobile-menu-overlay {
+                display: none !important;
+            }
             
-            /* Garantir que o header tenha z-index maior que o conteúdo */
-            header {
-                z-index: 1000;
+            .close-menu {
+                display: none;
             }
         }
     </style>
@@ -1042,12 +1103,31 @@
                 <span></span>
             </button>
             
-            <nav id="mainNav">
+            <!-- Menu desktop (visível apenas em telas grandes) -->
+            <nav class="desktop-nav">
                 <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
                 <a href="#" data-page="compare">Vale a pena desviar?</a>
                 <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
                 <a href="#" data-page="simulator">Simulação de rota</a>
             </nav>
+        </div>
+        
+        <!-- Menu mobile (overlay que cobre tela toda) -->
+        <div class="mobile-menu-overlay" id="mobileMenu">
+            <div class="mobile-menu-content">
+                <!-- Botão X para fechar -->
+                <button class="close-menu" id="closeMenu" aria-label="Fechar menu">
+                    <span>×</span>
+                </button>
+                
+                <!-- Links do menu -->
+                <div class="mobile-links">
+                    <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
+                    <a href="#" data-page="compare">Vale a pena desviar?</a>
+                    <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
+                    <a href="#" data-page="simulator">Simulação de rota</a>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -1116,18 +1196,33 @@
                 <div class="map-section">
                     <div class="map-container">
                         <div class="map-title">Mapa de Preços por Região</div>
-                        <svg id="brazilMap" viewBox="0 0 800 900">
-                            <!-- Simplified Brazil map with regions -->
-                            <!-- Norte -->
-                            <path class="region" data-region="NORTE" d="M200,50 L450,50 L450,250 L350,280 L200,220 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
-                            <!-- Nordeste -->
-                            <path class="region" data-region="NORDESTE" d="M450,50 L680,80 L650,320 L450,250 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
-                            <!-- Centro-Oeste -->
-                            <path class="region" data-region="CENTRO-OESTE" d="M200,220 L350,280 L450,250 L420,500 L180,480 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
-                            <!-- Sudeste -->
-                            <path class="region" data-region="SUDESTE" d="M420,500 L450,250 L650,320 L580,580 L450,600 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
-                            <!-- Sul -->
-                            <path class="region" data-region="SUL" d="M180,480 L420,500 L450,600 L350,750 L180,700 Z" fill="#E8E8E8" stroke="#fff" stroke-width="1"/>
+                        <svg id="brazilMap" viewBox="0 0 800 800" style="border: 1px solid #e8e8e8; border-radius: 8px;">
+                            <!-- Norte - Forma mais realista -->
+                            <path class="region" data-region="NORTE" d="M180,80 L320,60 L380,120 L360,200 L320,240 L280,220 L240,260 L220,320 L180,340 L140,300 L120,240 L140,180 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Norte"/>
+                            
+                            <!-- Nordeste - Forma mais realista -->
+                            <path class="region" data-region="NORDESTE" d="M380,120 L480,100 L580,140 L620,200 L600,280 L560,320 L520,340 L480,320 L440,360 L400,340 L360,300 L340,240 L380,200 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Nordeste"/>
+                            
+                            <!-- Centro-Oeste - Forma mais realista -->
+                            <path class="region" data-region="CENTRO-OESTE" d="M280,220 L360,200 L400,240 L440,280 L480,320 L440,360 L400,400 L340,380 L300,340 L260,300 L240,260 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Centro-Oeste"/>
+                            
+                            <!-- Sudeste - Forma mais realista -->
+                            <path class="region" data-region="SUDESTE" d="M440,280 L520,340 L560,320 L600,360 L580,400 L540,420 L500,440 L460,420 L420,380 L400,400 L360,380 L340,340 L400,300 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sudeste"/>
+                            
+                            <!-- Sul - Forma mais realista -->
+                            <path class="region" data-region="SUL" d="M460,420 L500,440 L520,480 L500,520 L460,540 L420,520 L380,480 L400,440 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sul"/>
+                            
+                            <!-- Adicionar labels -->
+                            <text x="250" y="200" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORTE</text>
+                            <text x="450" y="220" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORDESTE</text>
+                            <text x="340" y="320" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">CENTRO-OESTE</text>
+                            <text x="480" y="380" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUDESTE</text>
+                            <text x="440" y="500" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUL</text>
                         </svg>
                         <div class="legend">
                             <span>Mais barato</span>
@@ -2278,42 +2373,9 @@
 
         // Navegação entre páginas
         function setupNavigation() {
-            const navLinks = document.querySelectorAll('nav a');
+            
             const pages = document.querySelectorAll('.page');
             const filterButtons = document.querySelectorAll('.filter-btn');
-
-            // Navegação principal
-            navLinks.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const pageId = link.getAttribute('data-page');
-                    
-                    // Atualizar navegação
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    pages.forEach(p => p.classList.remove('active'));
-                    
-                    link.classList.add('active');
-                    document.getElementById(pageId).classList.add('active');
-                    
-                    // Carregar dados da página
-                    setTimeout(() => {
-                        switch(pageId) {
-                            case 'today':
-                                loadTodayPage();
-                                break;
-                            case 'compare':
-                                loadComparePage();
-                                break;
-                            case 'trend':
-                                loadTrendPage();
-                                break;
-                            case 'simulator':
-                                setupSimulatorPage();
-                                break;
-                        }
-                    }, 100);
-                });
-            });
 
             // Filtros de tipo de combustível
             filterButtons.forEach(btn => {
@@ -2415,52 +2477,87 @@
 
         function setupMobileMenu() {
             const menuToggle = document.getElementById('menuToggle');
-            const mainNav = document.getElementById('mainNav');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const closeMenu = document.getElementById('closeMenu');
             
-            if (menuToggle && mainNav) {
+            if (menuToggle && mobileMenu && closeMenu) {
+                // Abrir menu ao clicar no hamburger
                 menuToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    menuToggle.classList.toggle('active');
-                    mainNav.classList.toggle('active');
-                    
-                    // Prevenir scroll do body quando menu está aberto
-                    if (mainNav.classList.contains('active')) {
-                        document.body.style.overflow = 'hidden';
-                    } else {
-                        document.body.style.overflow = '';
-                    }
+                    mobileMenu.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // Bloquear scroll
+                    menuToggle.classList.add('active');
                 });
                 
-                // Fechar menu ao clicar em um link
-                const navLinks = mainNav.querySelectorAll('a');
-                navLinks.forEach(link => {
+                // Fechar menu ao clicar no X
+                closeMenu.addEventListener('click', () => {
+                    mobileMenu.classList.remove('active');
+                    document.body.style.overflow = ''; // Liberar scroll
+                    menuToggle.classList.remove('active');
+                });
+                
+                // Fechar menu ao clicar em um link do menu mobile
+                const mobileLinks = document.querySelectorAll('.mobile-links a');
+                mobileLinks.forEach(link => {
                     link.addEventListener('click', () => {
-                        menuToggle.classList.remove('active');
-                        mainNav.classList.remove('active');
+                        mobileMenu.classList.remove('active');
                         document.body.style.overflow = '';
+                        menuToggle.classList.remove('active');
                     });
                 });
                 
-                // Fechar menu ao clicar fora
-                document.addEventListener('click', (e) => {
-                    if (mainNav.classList.contains('active') && 
-                        !mainNav.contains(e.target) && 
-                        !menuToggle.contains(e.target)) {
-                        menuToggle.classList.remove('active');
-                        mainNav.classList.remove('active');
+                // Fechar menu ao clicar fora (no overlay)
+                mobileMenu.addEventListener('click', (e) => {
+                    if (e.target === mobileMenu) {
+                        mobileMenu.classList.remove('active');
                         document.body.style.overflow = '';
+                        menuToggle.classList.remove('active');
                     }
                 });
                 
                 // Fechar menu ao pressionar ESC
                 document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && mainNav.classList.contains('active')) {
-                        menuToggle.classList.remove('active');
-                        mainNav.classList.remove('active');
+                    if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+                        mobileMenu.classList.remove('active');
                         document.body.style.overflow = '';
+                        menuToggle.classList.remove('active');
                     }
                 });
             }
+            
+            // Configurar navegação para ambos os menus (desktop e mobile)
+            const allNavLinks = document.querySelectorAll('.desktop-nav a, .mobile-links a');
+            allNavLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = link.getAttribute('data-page');
+                    
+                    // Atualizar navegação
+                    allNavLinks.forEach(l => l.classList.remove('active'));
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    
+                    link.classList.add('active');
+                    document.getElementById(pageId).classList.add('active');
+                    
+                    // Carregar dados da página
+                    setTimeout(() => {
+                        switch(pageId) {
+                            case 'today':
+                                loadTodayPage();
+                                break;
+                            case 'compare':
+                                loadComparePage();
+                                break;
+                            case 'trend':
+                                loadTrendPage();
+                                break;
+                            case 'simulator':
+                                setupSimulatorPage();
+                                break;
+                        }
+                    }, 100);
+                });
+            });
         }
     </script>
 </body>
