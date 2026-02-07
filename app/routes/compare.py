@@ -236,6 +236,54 @@ async def compare_cities(
         logger.error(f"Erro em /cities: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {str(e)}")
 
+@router.get("/debug/raw-city")
+async def debug_raw_city(
+    city: str = Query(..., description="Nome da cidade"),
+    fuel_type: str = Query("gasolina", description="Tipo de combustível")
+):
+    """Debug: Mostra dados brutos para uma cidade"""
+    try:
+        processor = get_processor()
+        df = processor.df
+        
+        city_upper = city.upper()
+        
+        # Buscar todos os dados da cidade
+        city_data = df[df['MUNICIPIO'].astype(str).str.upper() == city_upper]
+        
+        if city_data.empty:
+            return {"found": False, "city": city_upper}
+        
+        # Mostrar todas as colunas disponíveis
+        columns_info = {}
+        for col in ['PRODUTO', 'PRODUTO_CONSOLIDADO', 'MUNICIPIO', 'PRECO_MEDIO_REVENDA', 'DATA_INICIAL']:
+            if col in city_data.columns:
+                columns_info[col] = {
+                    "unique_values": city_data[col].unique().tolist(),
+                    "sample": city_data[col].head(5).tolist()
+                }
+        
+        # Filtrar por gasolina
+        gasolina_data = city_data[
+            (city_data['PRODUTO'].astype(str).str.contains('GASOLINA', case=False, na=False)) |
+            (city_data['PRODUTO_CONSOLIDADO'].astype(str).str.contains('GASOLINA', case=False, na=False))
+        ]
+        
+        return {
+            "found": True,
+            "city": city_upper,
+            "total_records": len(city_data),
+            "gasolina_records": len(gasolina_data),
+            "columns_info": columns_info,
+            "gasolina_details": gasolina_data[['PRODUTO', 'PRODUTO_CONSOLIDADO', 'PRECO_MEDIO_REVENDA', 'DATA_INICIAL', 'NUMERO_DE_POSTOS_PESQUISADOS']].to_dict('records') if len(gasolina_data) > 0 else []
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em /debug/raw-city: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.get("/recommendation")
 async def get_recommendation(
     cities: str = Query(..., description="Lista de cidades separadas por vírgula"),
