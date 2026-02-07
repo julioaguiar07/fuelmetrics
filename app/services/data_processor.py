@@ -67,7 +67,7 @@ class DataProcessor:
             else:
                 self.df['NUMERO_DE_POSTOS_PESQUISADOS'] = 1
             
-            # Remover registros com preço inválido
+            # Remover registros com preço inválido (APENAS NaN ou <= 0)
             self.df = self.df.dropna(subset=['PRECO_MEDIO_REVENDA'])
             self.df = self.df[self.df['PRECO_MEDIO_REVENDA'] > 0]
             
@@ -87,6 +87,80 @@ class DataProcessor:
             # Remover caracteres especiais e acentos
             self.df['MUNICIPIO'] = self.df['MUNICIPIO'].apply(self._normalize_text)
             self.df['PRODUTO'] = self.df['PRODUTO'].apply(self._normalize_text)
+            
+            # Converter nomes de estados completos para siglas
+            # ... (mantenha o código existente de conversão de estados)
+            
+            self.df['ESTADO_SIGLA'] = self.df['ESTADO'].apply(estado_para_sigla)
+            logger.info(f"Estados convertidos. Exemplos: {self.df[['ESTADO', 'ESTADO_SIGLA']].head(10).to_dict('records')}")
+            
+            # Mapear regiões usando as siglas
+            def get_region_from_state_sigla(sigla):
+                # ... (mantenha o código existente)
+            
+            self.df['REGIAO'] = self.df['ESTADO_SIGLA'].apply(get_region_from_state_sigla)
+            
+            # Filtrar produtos relevantes
+            def is_valid_product(product):
+                if not isinstance(product, str):
+                    return False
+                product_upper = product.upper()
+                return any(valid in product_upper for valid in ['GASOLINA', 'DIESEL', 'GNV', 'ETANOL', 'ALCOOL'])
+            
+            self.df = self.df[self.df['PRODUTO'].apply(is_valid_product)]
+            
+            # Consolidar tipos similares
+            product_mapping = {
+                # ... (mantenha o mapeamento existente)
+            }
+            
+            # Criar coluna produto_consolidado
+            self.df['PRODUTO_CONSOLIDADO'] = self.df['PRODUTO'].map(
+                lambda x: product_mapping.get(str(x).strip().upper(), str(x).strip().upper())
+            )
+            
+            # Log para debug
+            logger.info(f"DEBUG - Colunas após processamento: {list(self.df.columns)}")
+            logger.info(f"DEBUG - Tipos das colunas: {self.df.dtypes.to_dict()}")
+            logger.info(f"DEBUG - Primeiras linhas:")
+            for i in range(min(3, len(self.df))):
+                logger.info(f"  Linha {i}: PRODUTO={self.df.iloc[i]['PRODUTO']}, PRODUTO_CONSOLIDADO={self.df.iloc[i]['PRODUTO_CONSOLIDADO']}")
+                
+            unique_products = self.df['PRODUTO'].unique()
+            unique_consolidated = self.df['PRODUTO_CONSOLIDADO'].unique()
+            logger.info(f"Produtos originais: {list(unique_products)}")
+            logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
+            
+            # NÃO REMOVER DUPLICATAS - MANTER DADOS HISTÓRICOS
+            # Apenas remover duplicatas exatas (todos os campos iguais)
+            initial_len = len(self.df)
+            self.df = self.df.drop_duplicates()  # Remove apenas linhas completamente idênticas
+            removed_exact_dups = initial_len - len(self.df)
+            
+            if removed_exact_dups > 0:
+                logger.info(f"Removidas {removed_exact_dups} duplicatas exatas")
+            
+            final_count = len(self.df)
+            logger.info(
+                f"Limpeza concluída: {final_count}/{initial_count} "
+                f"registros válidos ({initial_count - final_count} removidos)"
+            )
+            
+            # Log estatísticas
+            logger.info(f"Municípios únicos: {self.df['MUNICIPIO'].nunique()}")
+            logger.info(f"Estados únicos: {self.df['ESTADO'].nunique()}")
+            logger.info(f"Produtos únicos: {self.df['PRODUTO_CONSOLIDADO'].unique()}")
+            
+            # Log de contagem por produto consolidado
+            for produto in self.df['PRODUTO_CONSOLIDADO'].unique():
+                count = len(self.df[self.df['PRODUTO_CONSOLIDADO'] == produto])
+                logger.info(f"  {produto}: {count} registros")
+            
+            logger.info(f"Preço médio geral: R$ {self.df['PRECO_MEDIO_REVENDA'].mean():.2f}")
+            
+        except Exception as e:
+            logger.error(f"Erro na limpeza de dados: {e}")
+            raise
             
             # Converter nomes de estados completos para siglas
             def estado_para_sigla(estado_nome):
@@ -192,11 +266,11 @@ class DataProcessor:
             logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
             
             # Remover duplicatas (mantendo o menor preço)
-            self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
+            '''self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
             self.df = self.df.drop_duplicates(
                 subset=['MUNICIPIO', 'ESTADO', 'PRODUTO_CONSOLIDADO'],
                 keep='first'
-            )
+            )'''
             
             final_count = len(self.df)
             logger.info(
