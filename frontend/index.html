@@ -240,36 +240,36 @@
             height: 550px;
         }
 
-        /* ============================================
-           ESTILOS DO MAPA REALISTA
-           ============================================ */
-        #brazilMapContainer svg {
-            width: 100%;
-            height: 100%;
-            max-height: 550px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-        }
 
-        /* Estilo padrão dos estados */
-        #brazilMapContainer path {
-            fill: #E8E8E8;       /* Cor base */
-            stroke: #FFFFFF;     /* Borda branca entre estados */
-            stroke-width: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
 
-        /* Efeito ao passar o mouse */
-        #brazilMapContainer path:hover {
-            filter: brightness(0.85); /* Escurece um pouco a cor da região */
-            stroke: #666;
-            stroke-width: 1.5px;
-            transform: translateY(-2px); /* Leve "pulo" */
-            z-index: 10;
-            position: relative;
-        }
 
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         .region {
             cursor: pointer;
             transition: all 0.2s ease;
@@ -920,17 +920,17 @@
             border-color: var(--color-danger);
             background: var(--color-danger-light);
         }
-   
+
         /* ============================================
            MENU MOBILE - ESTILO FULL SCREEN
            ============================================ */
-        
+
         /* Menu desktop */
         .desktop-nav {
             display: flex;
             gap: var(--spacing-xl);
         }
-        
+
         /* Botão hamburger */
         .menu-toggle {
             display: none;
@@ -945,7 +945,7 @@
             z-index: 10002; /* Fica acima do menu branco */
             position: relative;
         }
-        
+
         .menu-toggle span {
             display: block;
             height: 2px;
@@ -954,12 +954,12 @@
             border-radius: 1px;
             transition: all 0.3s ease;
         }
-        
+
         /* Animação do X */
         .menu-toggle.active span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
         .menu-toggle.active span:nth-child(2) { opacity: 0; }
         .menu-toggle.active span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
-        
+
         /* Overlay Tela Cheia Branco */
         .mobile-menu-overlay {
             position: fixed;
@@ -969,24 +969,24 @@
             height: 100vh;
             background: #FFFFFF;
             z-index: 10001;
-            
+
             /* Animação suave */
             visibility: hidden;
             opacity: 0;
             transform: translateY(10px);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            
+
             /* Permitir rolagem se a tela for pequena */
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
-        
+
         .mobile-menu-overlay.active {
             visibility: visible;
             opacity: 1;
             transform: translateY(0);
         }
-        
+
         .mobile-menu-content {
             padding: 90px 24px 40px 24px; /* Padding top alto para não colar no topo */
             min-height: 100%;
@@ -994,7 +994,7 @@
             flex-direction: column;
             align-items: flex-start;
         }
-        
+
         /* Título opcional 'Navegação' */
         .menu-label {
             font-size: 12px;
@@ -1004,14 +1004,14 @@
             margin-bottom: 24px;
             font-weight: 600;
         }
-        
+
         /* Links da Lista Vertical */
         .mobile-links {
             display: flex;
             flex-direction: column;
             width: 100%;
         }
-        
+
         .mobile-links a {
             display: flex;
             align-items: center;
@@ -1022,7 +1022,7 @@
             border-bottom: 1px solid var(--color-border);
             border-radius: 0;
             box-shadow: none;
-            
+
             font-size: 18px;
             font-weight: 500;
             color: var(--color-text-primary);
@@ -1030,7 +1030,7 @@
             text-align: left;
             transition: color 0.2s ease, padding-left 0.2s ease;
         }
-        
+
         .mobile-links a:hover {
             background: transparent;
             color: var(--color-success);
@@ -1038,7 +1038,7 @@
             transform: none;
             box-shadow: none;
         }
-        
+
         .mobile-links a.active {
             color: var(--color-success);
             font-weight: 600;
@@ -1046,63 +1046,63 @@
             border-color: var(--color-border);
             box-shadow: none;
         }
-        
+
         /* Esconder o botão fechar antigo */
         .close-menu { display: none !important; }
-        
+
         /* ============================================
            RESPONSIVIDADE
            ============================================ */
-        
+
         @media (max-width: 1024px) {
             .map-section {
                 grid-template-columns: 1fr;
             }
-        
+
             .simulator-grid {
                 grid-template-columns: 1fr;
             }
         }
-        
+
         @media (max-width: 768px) {
             /* Esconder menu desktop em mobile */
             .desktop-nav {
                 display: none;
             }
-            
+
             /* Mostrar botão hamburger em mobile */
             .menu-toggle {
                 display: flex;
             }
-            
+
             /* Ajustes do conteúdo principal */
             main {
                 padding-top: 72px;
             }
-            
+
             .kpi-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .comparison-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             h1 {
                 font-size: 28px !important;
             }
-            
+
             header .container {
                 padding: 0 var(--spacing-md);
             }
         }
-        
+
         @media (min-width: 769px) {
             /* Esconder menu mobile em desktop */
             .mobile-menu-overlay {
                 display: none !important;
             }
-            
+
             .close-menu {
                 display: none;
             }
@@ -1114,13 +1114,13 @@
     <header>
             <div class="container">
                 <div class="logo">FuelMetrics</div>
-                
+
                 <button class="menu-toggle" id="menuToggle" aria-label="Menu">
                     <span></span>
                     <span></span>
                     <span></span>
                 </button>
-                
+
                 <nav class="desktop-nav">
                     <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
                     <a href="#" data-page="compare">Vale a pena desviar?</a>
@@ -1128,7 +1128,7 @@
                     <a href="#" data-page="simulator">Simulação de rota</a>
                 </nav>
             </div>
-            
+
             <div class="mobile-menu-overlay" id="mobileMenu">
                 <div class="mobile-menu-content">
                     <div class="menu-label">Navegação</div>
@@ -1207,9 +1207,34 @@
                 <div class="map-section">
                     <div class="map-container">
                         <div class="map-title">Mapa de Preços por Região</div>
-                        <div id="brazilMapContainer" style="width: 100%; height: 550px; position: relative; display: flex; justify-content: center; align-items: center;">
-                            <div class="loading"></div>
-                        </div>
+                        <svg id="brazilMap" viewBox="0 0 800 800" style="border: 1px solid #e8e8e8; border-radius: 8px;">
+                            <!-- Norte - Forma mais realista -->
+                            <path class="region" data-region="NORTE" d="M180,80 L320,60 L380,120 L360,200 L320,240 L280,220 L240,260 L220,320 L180,340 L140,300 L120,240 L140,180 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Norte"/>
+                            
+                            <!-- Nordeste - Forma mais realista -->
+                            <path class="region" data-region="NORDESTE" d="M380,120 L480,100 L580,140 L620,200 L600,280 L560,320 L520,340 L480,320 L440,360 L400,340 L360,300 L340,240 L380,200 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Nordeste"/>
+                            
+                            <!-- Centro-Oeste - Forma mais realista -->
+                            <path class="region" data-region="CENTRO-OESTE" d="M280,220 L360,200 L400,240 L440,280 L480,320 L440,360 L400,400 L340,380 L300,340 L260,300 L240,260 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Centro-Oeste"/>
+                            
+                            <!-- Sudeste - Forma mais realista -->
+                            <path class="region" data-region="SUDESTE" d="M440,280 L520,340 L560,320 L600,360 L580,400 L540,420 L500,440 L460,420 L420,380 L400,400 L360,380 L340,340 L400,300 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sudeste"/>
+                            
+                            <!-- Sul - Forma mais realista -->
+                            <path class="region" data-region="SUL" d="M460,420 L500,440 L520,480 L500,520 L460,540 L420,520 L380,480 L400,440 Z" 
+                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sul"/>
+                            
+                            <!-- Adicionar labels -->
+                            <text x="250" y="200" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORTE</text>
+                            <text x="450" y="220" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORDESTE</text>
+                            <text x="340" y="320" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">CENTRO-OESTE</text>
+                            <text x="480" y="380" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUDESTE</text>
+                            <text x="440" y="500" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUL</text>
+                        </svg>
                         <div class="legend">
                             <span>Mais barato</span>
                             <div class="legend-gradient"></div>
@@ -1256,7 +1281,7 @@
                         <button class="filter-btn" data-compare-fuel="gnv">GNV</button>
                     </div>
                 </div>
-    
+
                 <!-- Selected Cities -->
                 <div id="selectedCities" class="filters" style="display: none;">
                     <div class="filter-label">Cidades Selecionadas</div>
@@ -1345,7 +1370,7 @@
                     <!-- Tank Configuration -->
                     <div class="simulator-section">
                         <div class="section-title">Configuração do Veículo</div>
-                        
+
                         <div class="input-group">
                             <label class="input-label">Capacidade do Tanque (L)</label>
                             <input type="number" class="input-field" id="tankCapacity" value="50" min="1" max="200" step="1">
@@ -1377,7 +1402,7 @@
                     <!-- Trip Simulation -->
                     <div class="simulator-section">
                         <div class="section-title">Dados da Viagem</div>
-                        
+
                         <div class="input-group">
                             <label class="input-label">Origem</label>
                             <input type="text" class="input-field" id="origin" value="São Paulo, SP" placeholder="Ex: São Paulo, SP">
@@ -1447,12 +1472,12 @@
         // ============================================
         // CONFIGURAÇÃO E CONSTANTES
         // ============================================
-        
+
         // Configuração da API
         const API_BASE_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:8000/api' 
             : '/api'; // Usar caminho relativo em produção
-        
+
         const API_ENDPOINTS = {
             TODAY: {
                 SUMMARY: '/today/summary',
@@ -1486,7 +1511,7 @@
             trendChart: null,
             isLoading: false
         };
-        
+
         let compareFuelType = 'gasolina'; // Novo estado para combustível na comparação
         // ============================================
         // FUNÇÕES UTILITÁRIAS
@@ -1514,7 +1539,7 @@
 
             try {
                 showNotification('Carregando dados...', 'info');
-                
+
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                     signal: controller.signal,
                     headers: {
@@ -1536,13 +1561,13 @@
 
             } catch (error) {
                 clearTimeout(timeoutId);
-                
+
                 if (error.name === 'AbortError') {
                     showNotification('Tempo de conexão esgotado. Tente novamente.', 'error');
                 } else {
                     showNotification('Erro ao conectar com o servidor. Tente novamente.', 'error');
                 }
-                
+
                 console.error('API Error:', error);
                 return null;
             }
@@ -1553,7 +1578,7 @@
             const notification = document.getElementById('notification');
             notification.textContent = message;
             notification.className = `notification show ${type}`;
-            
+
             if (type !== 'info') {
                 setTimeout(() => {
                     notification.classList.remove('show');
@@ -1572,11 +1597,11 @@
 
         async function loadTodayPage() {
             showNotification('Carregando dados atualizados...', 'info');
-            
+
             try {
                 // Carregar dados sumarizados
                 const summary = await fetchAPI(`${API_ENDPOINTS.TODAY.SUMMARY}?fuel_type=${appState.currentFuelType}`);
-                
+
                 if (!summary) {
                     loadFallbackTodayData();
                     return;
@@ -1584,15 +1609,15 @@
 
                 // Atualizar KPIs
                 updateTodayKPIs(summary);
-                
+
                 // Atualizar mapa
                 await updateMapData();
-                
+
                 // Atualizar ranking
                 updateRankingList(summary.ranking);
-                
+
                 showNotification('Dados atualizados com sucesso!', 'success');
-                
+
             } catch (error) {
                 console.error('Erro ao carregar página hoje:', error);
                 loadFallbackTodayData();
@@ -1603,159 +1628,161 @@
             // Melhor preço
             const bestPriceElement = document.querySelector('#todayKpis .kpi-value.success');
             bestPriceElement.textContent = formatCurrency(summary.best_price.price);
-            
+
             const bestLocationElement = document.getElementById('bestPriceLocation');
             bestLocationElement.textContent = `📍 ${summary.best_price.city}, ${summary.best_price.state}`;
-            
+
             // Atualizar badge do tipo de combustível
             const fuelBadge = document.querySelector('#todayKpis .badge');
             fuelBadge.textContent = appState.currentFuelType.charAt(0).toUpperCase() + appState.currentFuelType.slice(1);
-            
+
             // Economia potencial
             const savingElement = document.querySelectorAll('#todayKpis .kpi-value.success')[1];
             savingElement.textContent = formatCurrency(summary.potential_saving);
-            
+
             // Postos analisados
             const stationsElement = document.querySelectorAll('#todayKpis .kpi-value')[2];
             stationsElement.textContent = formatNumber(summary.total_stations);
-            
+
             // Última atualização
             const lastUpdateElement = document.getElementById('lastUpdate');
             const updateDate = new Date(summary.analysis_date);
             lastUpdateElement.textContent = updateDate.toLocaleDateString('pt-BR');
-            
+
             const updateStatusElement = document.getElementById('updateStatus');
             updateStatusElement.textContent = 'Dados Atualizados';
             updateStatusElement.className = 'badge success';
         }
 
-        // ============================================
-        // LÓGICA DO MAPA REALISTA
-        // ============================================
 
-        // Mapeamento: Qual estado pertence a qual região?
-        const STATE_TO_REGION = {
-            'AC': 'NORTE', 'AM': 'NORTE', 'AP': 'NORTE', 'PA': 'NORTE', 'RO': 'NORTE', 'RR': 'NORTE', 'TO': 'NORTE',
-            'AL': 'NORDESTE', 'BA': 'NORDESTE', 'CE': 'NORDESTE', 'MA': 'NORDESTE', 'PB': 'NORDESTE', 'PE': 'NORDESTE', 'PI': 'NORDESTE', 'RN': 'NORDESTE', 'SE': 'NORDESTE',
-            'DF': 'CENTRO-OESTE', 'GO': 'CENTRO-OESTE', 'MT': 'CENTRO-OESTE', 'MS': 'CENTRO-OESTE',
-            'ES': 'SUDESTE', 'MG': 'SUDESTE', 'RJ': 'SUDESTE', 'SP': 'SUDESTE',
-            'PR': 'SUL', 'RS': 'SUL', 'SC': 'SUL'
-        };
 
-        // Cache do SVG para não baixar toda hora
-        let cachedMapSVG = null;
 
-        // Função principal chamada pelo app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         async function updateMapData() {
             try {
-                // 1. Garante que o mapa SVG está carregado na tela
-                await ensureMapLoaded();
 
-                // 2. Busca dados da API (Preços por Região)
+
+
+
                 const regionsData = await fetchAPI(`${API_ENDPOINTS.TODAY.REGIONS}?fuel_type=${appState.currentFuelType}`);
-                
-                if (!regionsData || !Array.isArray(regionsData)) return;
 
-                // 3. Calcula escala de cores (Gradient)
+                if (!regionsData || !Array.isArray(regionsData)) {
+                    return;
+                }
+                
+                // Calcular escala de cores
                 const prices = regionsData.map(r => r.avg_price);
                 const minPrice = Math.min(...prices);
                 const maxPrice = Math.max(...prices);
                 const priceRange = maxPrice - minPrice;
 
-                // Cria mapa de dados para acesso rápido: { "SUDESTE": {preco: 5.00}, ... }
-                const dataByRegion = {};
-                regionsData.forEach(d => dataByRegion[d.region] = d);
 
-                // 4. Pinta cada estado no mapa
-                const states = document.querySelectorAll('#brazilMapContainer path');
-                
-                states.forEach(statePath => {
-                    // O SVG usa IDs como "BR-SP", removemos o "BR-" para pegar a sigla
-                    const id = statePath.getAttribute('id') || '';
-                    const uf = id.replace('BR-', '');
-                    const regionName = STATE_TO_REGION[uf];
 
-                    if (regionName && dataByRegion[regionName]) {
-                        const data = dataByRegion[regionName];
-                        
-                        // Cálculo da cor (Verde -> Vermelho)
-                        const normalized = (data.avg_price - minPrice) / (priceRange || 1); // Evita div por zero
-                        const hue = (1 - normalized) * 120; // 120=Verde, 0=Vermelho
-                        
-                        // Aplica cor
-                        statePath.style.fill = `hsl(${hue}, 70%, 50%)`;
 
-                        // Salva dados no elemento para o Tooltip usar depois
-                        statePath.dataset.uf = uf;
-                        statePath.dataset.region = regionName;
-                        statePath.dataset.price = data.avg_price;
-                        statePath.dataset.stations = data.stations_count;
+
+
+
+
+                // Atualizar cores das regiões
+                regionsData.forEach(regionData => {
+                    const regionElement = document.querySelector(`.region[data-region="${regionData.region}"]`);
+                    if (regionElement) {
+                        // Calcular cor baseada no preço
+                        const normalizedPrice = (regionData.avg_price - minPrice) / priceRange;
+                        const hue = (1 - normalizedPrice) * 120; // Verde (120) a Vermelho (0)
+                        regionElement.style.fill = `hsl(${hue}, 70%, 50%)`;
+                        regionElement.dataset.price = regionData.avg_price.toFixed(2);
+                        regionElement.dataset.stations = regionData.stations_count;
+
+
+
+
+
+
+
+
+
+
+
                     }
                 });
+                
 
-                // 5. Configura o Tooltip
-                setupRealisticTooltip();
+
 
             } catch (error) {
                 console.error('Erro ao atualizar mapa:', error);
             }
         }
 
-        // Carrega o SVG externo (Lucas Bassetti) se ainda não estiver na tela
-        async function ensureMapLoaded() {
-            const container = document.getElementById('brazilMapContainer');
-            if (container.querySelector('svg')) return; // Já carregado
 
-            if (!cachedMapSVG) {
-                // URL do SVG realista
-                const svgUrl = 'https://cdn.jsdelivr.net/gh/lucasbassetti/mapa-brasil-svg@master/mapa.svg';
-                const resp = await fetch(svgUrl);
-                cachedMapSVG = await resp.text();
-            }
-            container.innerHTML = cachedMapSVG;
-        }
 
-        // Configura eventos de mouse (Hover)
-        function setupRealisticTooltip() {
-            const tooltip = document.getElementById('mapTooltip');
-            const states = document.querySelectorAll('#brazilMapContainer path');
 
-            states.forEach(state => {
-                // Mouse Entra
-                state.addEventListener('mouseenter', (e) => {
-                    const uf = state.dataset.uf;
-                    const region = state.dataset.region;
-                    const price = state.dataset.price;
-                    const stations = state.dataset.stations;
 
-                    if (price) {
-                        tooltip.innerHTML = `
-                            <div style="text-align:left">
-                                <strong style="color:#fff; font-size:14px">${uf}</strong> <span style="font-size:11px; color:#ccc">(${region})</span><br>
-                                <div style="margin-top:4px; font-size:15px; font-weight:bold; color:var(--color-success)">${formatCurrency(parseFloat(price))}</div>
-                                <div style="font-size:11px; color:#aaa; margin-top:2px">${parseInt(stations).toLocaleString()} postos</div>
-                            </div>
-                        `;
-                        tooltip.classList.add('active');
-                    }
-                });
 
-                // Mouse Move (Tooltip segue o mouse)
-                state.addEventListener('mousemove', (e) => {
-                    tooltip.style.left = (e.pageX + 15) + 'px';
-                    tooltip.style.top = (e.pageY + 15) + 'px';
-                });
 
-                // Mouse Sai
-                state.addEventListener('mouseleave', () => {
-                    tooltip.classList.remove('active');
-                });
-            });
-        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         function updateRankingList(ranking) {
             const rankingList = document.getElementById('rankingList');
-            
+
             if (!ranking || ranking.length === 0) {
                 rankingList.innerHTML = `
                     <div class="ranking-item" style="text-align: center; padding: var(--spacing-xl); color: var(--color-text-tertiary);">
@@ -1764,13 +1791,13 @@
                 `;
                 return;
             }
-            
+
             rankingList.innerHTML = '';
-            
+
             ranking.forEach((item, index) => {
                 const rankingItem = document.createElement('div');
                 rankingItem.className = `ranking-item ${index === 0 ? 'top' : ''}`;
-                
+
                 rankingItem.innerHTML = `
                     <div class="ranking-number">${item.rank}</div>
                     <div class="ranking-info">
@@ -1779,14 +1806,14 @@
                     </div>
                     <div class="ranking-price">${formatCurrency(item.price)}</div>
                 `;
-                
+
                 rankingList.appendChild(rankingItem);
             });
         }
 
         function loadFallbackTodayData() {
             showNotification('Usando dados de exemplo. Conectando com servidor...', 'warning');
-            
+
             // Dados de exemplo
             const exampleData = {
                 best_price: {
@@ -1810,7 +1837,7 @@
                     { rank: 10, city: 'MARINGÁ', state: 'PR', price: 5.11 }
                 ]
             };
-            
+
             updateTodayKPIs(exampleData);
             updateRankingList(exampleData.ranking);
         }
@@ -1821,14 +1848,14 @@
         async function loadComparePage() {
             // Configurar busca
             setupCitySearch();
-            
+
             // Configurar filtro de combustível
             setupCompareFuelFilter();
-            
+
             // Limpar comparação anterior
             document.getElementById('comparisonGrid').innerHTML = '';
             document.getElementById('selectedCities').style.display = 'none';
-            
+
             // Atualizar card de recomendação
             const decisionCard = document.getElementById('compareDecision');
             decisionCard.innerHTML = `
@@ -1841,28 +1868,28 @@
         function setupCitySearch() {
             const searchInput = document.getElementById('citySearch');
             const autocompleteList = document.getElementById('autocompleteList');
-            
+
             // Limpar ao focar
             searchInput.addEventListener('focus', () => {
                 searchInput.value = '';
                 autocompleteList.style.display = 'none';
             });
-            
+
             // Busca com debounce
             let searchTimeout;
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(searchTimeout);
                 const query = e.target.value.trim();
-                
+
                 if (query.length < 2) {
                     autocompleteList.style.display = 'none';
                     return;
                 }
-                
+
                 searchTimeout = setTimeout(async () => {
                     try {
                         const results = await fetchAPI(`${API_ENDPOINTS.TODAY.SEARCH}?query=${encodeURIComponent(query)}&limit=5`);
-                        
+
                         if (results && results.length > 0) {
                             autocompleteList.innerHTML = '';
                             results.forEach(city => {
@@ -1871,13 +1898,13 @@
                                 item.textContent = `${city.city}, ${city.state} (${formatCurrency(city.avg_price)})`;
                                 item.dataset.city = city.city;
                                 item.dataset.state = city.state;
-                                
+
                                 item.addEventListener('click', () => {
                                     addCityToComparison(city.city);
                                     searchInput.value = '';
                                     autocompleteList.style.display = 'none';
                                 });
-                                
+
                                 autocompleteList.appendChild(item);
                             });
                             autocompleteList.style.display = 'block';
@@ -1890,7 +1917,7 @@
                     }
                 }, 300);
             });
-            
+
             // Adicionar cidade ao pressionar Enter
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -1902,7 +1929,7 @@
                     }
                 }
             });
-            
+
             // Fechar autocomplete ao clicar fora
             document.addEventListener('click', (e) => {
                 if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
@@ -1910,11 +1937,11 @@
                 }
             });
         }
-        
+
         // Configurar filtros de combustível na comparação
         function setupCompareFuelFilter() {
             const fuelButtons = document.querySelectorAll('[data-compare-fuel]');
-            
+
             fuelButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     // Atualizar botões ativos
@@ -1923,12 +1950,12 @@
                         parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                     }
                     btn.classList.add('active');
-                    
+
                     // Atualizar tipo de combustível para comparação
                     const fuelType = btn.getAttribute('data-compare-fuel');
                     if (fuelType) {
                         compareFuelType = fuelType;
-                        
+
                         // Se já temos cidades selecionadas, fazer nova comparação
                         if (appState.selectedCities.length >= 2) {
                             compareSelectedCities();
@@ -1937,16 +1964,16 @@
                 });
             });
         }
-        
+
         function addCityToComparison(cityName) {
             if (appState.selectedCities.includes(cityName)) {
                 showNotification(`${cityName} já está na lista de comparação.`, 'warning');
                 return;
             }
-            
+
             appState.selectedCities.push(cityName);
             updateCityTags();
-            
+
             if (appState.selectedCities.length >= 2) {
                 compareSelectedCities();
             }
@@ -1955,7 +1982,7 @@
         function removeCityFromComparison(cityName) {
             appState.selectedCities = appState.selectedCities.filter(city => city !== cityName);
             updateCityTags();
-            
+
             if (appState.selectedCities.length >= 2) {
                 compareSelectedCities();
             } else {
@@ -1967,7 +1994,7 @@
                     <div class="decision-diff">${appState.selectedCities.length === 1 ? 'Adicione mais uma cidade' : 'Digite os nomes acima e pressione Enter'}</div>
                     <div class="decision-explanation">O sistema comparará os preços médios, mínimos e máximos de cada cidade e indicará qual oferece a melhor economia.</div>
                 `;
-                
+
                 // Limpar grid de comparação
                 document.getElementById('comparisonGrid').innerHTML = '';
             }
@@ -1976,15 +2003,15 @@
         function updateCityTags() {
             const cityTags = document.getElementById('cityTags');
             const selectedCitiesSection = document.getElementById('selectedCities');
-            
+
             if (appState.selectedCities.length === 0) {
                 selectedCitiesSection.style.display = 'none';
                 return;
             }
-            
+
             selectedCitiesSection.style.display = 'block';
             cityTags.innerHTML = '';
-            
+
             appState.selectedCities.forEach(city => {
                 const tag = document.createElement('button');
                 tag.className = 'filter-btn active';
@@ -1993,31 +2020,31 @@
                 cityTags.appendChild(tag);
             });
         }
-        
+
         async function compareSelectedCities() {
             if (appState.selectedCities.length < 2) return;
-            
+
             showNotification('Comparando cidades...', 'info');
-            
+
             try {
                 // Obter comparação
                 const citiesParam = appState.selectedCities.join(',');
                 const comparison = await fetchAPI(`${API_ENDPOINTS.COMPARE.CITIES}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${compareFuelType}`);
-                
+
                 if (!comparison || comparison.length < 2) {
                     showNotification('Dados insuficientes para comparação.', 'error');
                     return;
                 }
-                
+
                 // Obter recomendação
                 const recommendation = await fetchAPI(`${API_ENDPOINTS.COMPARE.RECOMMENDATION}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${compareFuelType}`);
-                
+
                 // Atualizar interface
                 updateComparisonGrid(comparison);
                 updateComparisonDecision(recommendation);
-                
+
                 showNotification('Comparação concluída!', 'success');
-                
+
             } catch (error) {
                 console.error('Erro na comparação:', error);
                 showNotification('Erro ao comparar cidades.', 'error');
@@ -2027,27 +2054,27 @@
         function updateComparisonGrid(comparison) {
             const grid = document.getElementById('comparisonGrid');
             grid.innerHTML = '';
-            
+
             // Encontrar melhor preço
             const bestCity = comparison.reduce((best, current) => {
                 const currentPrice = current.fuels[compareFuelType]?.avg;
                 const bestPrice = best.fuels[compareFuelType]?.avg;
                 return currentPrice < bestPrice ? current : best;
             });
-            
+
             comparison.forEach(city => {
                 const fuelData = city.fuels[compareFuelType];
                 if (!fuelData) return;
-                
+
                 const isWinner = city.city === bestCity.city;
-                
+
                 const card = document.createElement('div');
                 card.className = `comparison-card ${isWinner ? 'winner' : ''}`;
-                
+
                 if (isWinner) {
                     card.innerHTML = `<div class="winner-badge">Melhor Opção</div>`;
                 }
-                
+
                 card.innerHTML += `
                     <div class="comparison-city">${city.city}, ${city.state}</div>
                     <div class="kpi-meta" style="margin-bottom: var(--spacing-md); font-size: 13px; color: var(--color-text-tertiary);">
@@ -2072,17 +2099,17 @@
                         </div>
                     </div>
                 `;
-                
+
                 grid.appendChild(card);
             });
         }
 
         function updateComparisonDecision(recommendation) {
             if (!recommendation) return;
-            
+
             const decisionCard = document.getElementById('compareDecision');
             decisionCard.className = 'decision-card';
-            
+
             decisionCard.innerHTML = `
                 <div class="decision-title">Recomendação</div>
                 <div class="decision-result">${recommendation.recommendation}</div>
@@ -2097,29 +2124,29 @@
 
         async function loadTrendPage() {
             showNotification('Analisando tendência de preços...', 'info');
-            
+
             try {
                 // Obter análise de tendência
                 const analysis = await fetchAPI(`${API_ENDPOINTS.TREND.ANALYSIS}?fuel_type=${appState.currentFuelType}&lookback_days=90`);
-                
+
                 if (!analysis) {
                     loadFallbackTrendData();
                     return;
                 }
-                
+
                 // Obter histórico para gráfico
                 const history = await fetchAPI(`${API_ENDPOINTS.TREND.HISTORY}?fuel_type=${appState.currentFuelType}&days=30`);
-                
+
                 // Atualizar interface
                 updateTrendDecision(analysis);
                 updateTrendIndicators(analysis);
-                
+
                 if (history) {
                     updateTrendChart(history);
                 }
-                
+
                 showNotification('Análise de tendência concluída!', 'success');
-                
+
             } catch (error) {
                 console.error('Erro ao carregar página de tendência:', error);
                 loadFallbackTrendData();
@@ -2128,14 +2155,14 @@
 
         function updateTrendDecision(analysis) {
             const decisionCard = document.getElementById('trendDecision');
-            
+
             // Definir cor baseada na recomendação
             if (analysis.recommendation === 'abastecer_agora') {
                 decisionCard.className = 'decision-card danger';
             } else {
                 decisionCard.className = 'decision-card success';
             }
-            
+
             decisionCard.innerHTML = `
                 <div class="decision-title">Recomendação Baseada em Dados</div>
                 <div class="decision-result">${analysis.recommendation === 'abastecer_agora' ? 'Abastecer Agora' : 'Pode Esperar'}</div>
@@ -2145,27 +2172,27 @@
 
         function updateTrendIndicators(analysis) {
             const indicators = document.getElementById('trendIndicators');
-            
+
             // Variação
             const variationIcon = indicators.querySelector('.indicator-icon.up');
             const variationValue = indicators.querySelector('.indicator-value');
-            
+
             variationIcon.textContent = analysis.trend_indicator > 0 ? '↗' : analysis.trend_indicator < 0 ? '↘' : '→';
             variationIcon.className = `indicator-icon ${
                 analysis.trend_indicator > 5 ? 'up' : 
                 analysis.trend_indicator < -5 ? 'down' : 'stable'
             }`;
-            
+
             variationValue.textContent = `${analysis.trend_indicator > 0 ? '+' : ''}${analysis.trend_indicator.toFixed(1)}%`;
             variationValue.style.color = analysis.trend_indicator > 0 ? 'var(--color-danger)' : 
                                         analysis.trend_indicator < 0 ? 'var(--color-success)' : 
                                         'var(--color-text-tertiary)';
-            
+
             // Volatilidade
             const volatilityValue = indicators.querySelectorAll('.indicator-value')[1];
             volatilityValue.textContent = analysis.volatility < 0.05 ? 'Baixa' : 
                                          analysis.volatility < 0.1 ? 'Média' : 'Alta';
-            
+
             // Tendência
             const trendValue = indicators.querySelectorAll('.indicator-value')[2];
             trendValue.textContent = analysis.trend_direction === 'up' ? 'De Alta' :
@@ -2177,25 +2204,25 @@
 
         function updateTrendChart(historyData) {
             const ctx = document.getElementById('trendChart').getContext('2d');
-            
+
             // Destruir gráfico anterior se existir
             if (appState.trendChart) {
                 appState.trendChart.destroy();
             }
-            
+
             // Preparar dados
             const labels = historyData.history.map(h => {
                 const date = new Date(h.date);
                 return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
             });
-            
+
             const prices = historyData.history.map(h => h.price);
-            
+
             // Determinar cor baseada na tendência
             const firstPrice = prices[0];
             const lastPrice = prices[prices.length - 1];
             const isRising = lastPrice > firstPrice;
-            
+
             appState.trendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -2276,7 +2303,7 @@
 
         function loadFallbackTrendData() {
             showNotification('Usando análise de exemplo.', 'warning');
-            
+
             // Dados de exemplo
             const exampleAnalysis = {
                 current_price: 5.29,
@@ -2287,7 +2314,7 @@
                 confidence_level: 85.5,
                 trend_direction: 'up'
             };
-            
+
             updateTrendDecision(exampleAnalysis);
             updateTrendIndicators(exampleAnalysis);
         }
@@ -2303,45 +2330,45 @@
             const consumption = document.getElementById('consumption');
             const distance = document.getElementById('distance');
             const calculateButton = document.getElementById('calculateTrip');
-            
+
             // Atualizar visualização do tanque
             function updateTankVisual() {
                 const level = currentLevel.value;
                 document.getElementById('levelValue').textContent = level + '%';
                 document.getElementById('tankFill').style.height = level + '%';
-                
+
                 const capacity = parseFloat(tankCapacity.value) || 50;
                 const liters = (capacity * level / 100).toFixed(1);
                 document.getElementById('tankLiters').textContent = liters;
-                
+
                 updateAutonomy();
             }
-            
+
             function updateAutonomy() {
                 const capacity = parseFloat(tankCapacity.value) || 50;
                 const level = parseFloat(currentLevel.value) || 0;
                 const cons = parseFloat(consumption.value) || 12;
-                
+
                 const currentLiters = capacity * level / 100;
                 const currentAutonomy = currentLiters * cons;
                 document.getElementById('autonomy').textContent = Math.round(currentAutonomy);
             }
-            
+
             // Event listeners
             currentLevel.addEventListener('input', updateTankVisual);
             tankCapacity.addEventListener('input', updateAutonomy);
             consumption.addEventListener('input', updateAutonomy);
-            
+
             // Botão de cálculo
             calculateButton.addEventListener('click', calculateTrip);
-            
+
             // Calcular inicial
             updateTankVisual();
         }
 
         async function calculateTrip() {
             showNotification('Calculando viabilidade da viagem...', 'info');
-            
+
             try {
                 // Coletar dados do formulário
                 const tankCapacity = parseFloat(document.getElementById('tankCapacity').value);
@@ -2350,13 +2377,13 @@
                 const distance = parseFloat(document.getElementById('distance').value);
                 const fuelType = document.getElementById('simulatorFuelType').value;
                 const origin = document.getElementById('origin').value;
-                
+
                 // Extrair cidade da origem (se possível)
                 let city = null;
                 if (origin.includes(',')) {
                     city = origin.split(',')[0].trim().toUpperCase();
                 }
-                
+
                 // Chamar API
                 const params = new URLSearchParams({
                     tank_capacity: tankCapacity,
@@ -2365,23 +2392,23 @@
                     distance: distance,
                     fuel_type: fuelType
                 });
-                
+
                 if (city) {
                     params.append('city', city);
                 }
-                
+
                 const result = await fetchAPI(`${API_ENDPOINTS.SIMULATOR.CALCULATE}?${params}`);
-                
+
                 if (!result) {
                     showFallbackSimulation();
                     return;
                 }
-                
+
                 // Atualizar resultado
                 updateTripResult(result);
-                
+
                 showNotification('Cálculo concluído!', 'success');
-                
+
             } catch (error) {
                 console.error('Erro ao calcular viagem:', error);
                 showFallbackSimulation();
@@ -2390,10 +2417,10 @@
 
         function updateTripResult(result) {
             const tripResult = document.getElementById('tripResult');
-            
+
             // Definir estilo baseado no status
             tripResult.className = `result-card ${result.status}`;
-            
+
             // Definir ícone
             let icon = '⏳';
             let title = 'Aguardando';
@@ -2407,7 +2434,7 @@
                 icon = '✕';
                 title = 'Não É Possível Completar';
             }
-            
+
             // Atualizar conteúdo
             tripResult.innerHTML = `
                 <div class="result-icon">${icon}</div>
@@ -2428,7 +2455,7 @@
 
         function showFallbackSimulation() {
             showNotification('Usando cálculo de exemplo.', 'warning');
-            
+
             // Dados de exemplo
             const exampleResult = {
                 current_autonomy: 360,
@@ -2441,7 +2468,7 @@
                 estimated_cost: 40.45,
                 safety_margin: 265.0
             };
-            
+
             updateTripResult(exampleResult);
         }
 
@@ -2451,7 +2478,7 @@
 
         // Navegação entre páginas
         function setupNavigation() {
-            
+
             const pages = document.querySelectorAll('.page');
             const filterButtons = document.querySelectorAll('.filter-btn');
 
@@ -2464,12 +2491,12 @@
                         parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                     }
                     btn.classList.add('active');
-                    
+
                     // Atualizar tipo de combustível
                     const fuelType = btn.getAttribute('data-fuel');
                     if (fuelType) {
                         appState.currentFuelType = fuelType;
-                        
+
                         // Recarregar dados da página atual
                         const activePage = document.querySelector('.page.active').id;
                         switch(activePage) {
@@ -2493,7 +2520,7 @@
                     const regionName = region.getAttribute('data-region');
                     const price = region.getAttribute('data-price');
                     const stations = region.getAttribute('data-stations');
-                    
+
                     if (price && stations) {
                         tooltip.innerHTML = `
                             <strong>${regionName}</strong><br>
@@ -2519,13 +2546,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Configurar menu mobile (hamburger)
             setupMobileMenu();
-            
+
             // Configurar navegação
             setupNavigation();
-            
+
             // Carregar página inicial
             loadTodayPage();
-            
+
             // Configurar atualização periódica (a cada 5 minutos)
             setInterval(() => {
                 const activePage = document.querySelector('.page.active').id;
@@ -2533,7 +2560,7 @@
                     loadTodayPage();
                 }
             }, 5 * 60 * 1000);
-            
+
             // Verificar conexão
             checkConnection();
         });
@@ -2564,7 +2591,7 @@
                 menuToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const isActive = mobileMenu.classList.contains('active');
-                    
+
                     if (isActive) {
                         // Fechar
                         mobileMenu.classList.remove('active');
