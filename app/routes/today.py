@@ -318,6 +318,51 @@ async def get_regions_data(
         logger.error(f"Erro em /regions: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@router.get("/debug/check-dates-problem")
+async def debug_check_dates_problem():
+    """Verifica específicamente o problema das datas"""
+    try:
+        processor = get_processor()
+        df = processor.df
+        
+        if 'DATA_FINAL' not in df.columns:
+            return {"error": "DATA_FINAL não encontrada"}
+        
+        # Análise detalhada
+        date_analysis = df['DATA_FINAL'].dt.date.value_counts().reset_index()
+        date_analysis.columns = ['data', 'quantidade']
+        date_analysis = date_analysis.sort_values('data', ascending=False)
+        
+        # Verificar se há datas de fevereiro
+        feb_dates = df[df['DATA_FINAL'].dt.month == 2]
+        
+        # Verificar dados específicos que você mencionou
+        target_cities = ['SAO LUIS', 'SAO JOSE DE RIBAMAR', 'QUIXADA', 'ANANINDEUA', 'AGUAS LINDAS DE GOIAS']
+        city_data = {}
+        
+        for city in target_cities:
+            city_df = df[df['MUNICIPIO'] == city]
+            if not city_df.empty:
+                # Agrupar por data
+                by_date = city_df.groupby(city_df['DATA_FINAL'].dt.date).agg({
+                    'PRECO_MEDIO_REVENDA': 'mean',
+                    'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
+                }).reset_index()
+                city_data[city] = by_date.sort_values('DATA_FINAL', ascending=False).to_dict('records')
+        
+        return {
+            "total_records": len(df),
+            "date_distribution": date_analysis.head(10).to_dict('records'),
+            "february_records_count": len(feb_dates),
+            "february_sample": feb_dates[['MUNICIPIO', 'PRODUTO', 'PRECO_MEDIO_REVENDA', 'DATA_FINAL']].head(5).to_dict('records') if len(feb_dates) > 0 else [],
+            "target_cities_data": city_data,
+            "problem_hypothesis": "O sistema pode estar interpretando 31/01/2026 como 07/02/2026 devido a erro de parsing"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em /debug/check-dates-problem: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/summary", response_model=SummaryResponse)
 async def get_today_summary(
     fuel_type: FuelType = Query(FuelType.GASOLINA, description="Tipo de combustível")
