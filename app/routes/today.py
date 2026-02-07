@@ -129,6 +129,33 @@ async def get_best_price(
         logger.error(f"Erro em /best-price: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@router.get("/debug/latest-dates")
+async def debug_latest_dates():
+    """Debug: Verificar datas dos dados"""
+    try:
+        processor = get_processor()
+        df = processor.df
+        
+        # Verificar todas as datas disponíveis
+        if 'DATA_FINAL' in df.columns:
+            unique_dates = df['DATA_FINAL'].unique()
+            sorted_dates = sorted(unique_dates, reverse=True)
+            return {
+                "total_records": len(df),
+                "unique_dates_count": len(unique_dates),
+                "latest_5_dates": [str(date) for date in sorted_dates[:5]],
+                "latest_date": str(df['DATA_FINAL'].max()),
+                "oldest_date": str(df['DATA_FINAL'].min()),
+                "sample_data_latest": df[df['DATA_FINAL'] == df['DATA_FINAL'].max()][['MUNICIPIO', 'PRODUTO', 'PRECO_MEDIO_REVENDA', 'DATA_FINAL']].head(5).to_dict('records')
+            }
+        
+        return {"error": "Coluna DATA_FINAL não encontrada", "columns": list(df.columns)}
+        
+    except Exception as e:
+        logger.error(f"Erro em /debug/latest-dates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/ranking", response_model=List[RankingItem])
 async def get_ranking(
     fuel_type: FuelType = Query(FuelType.GASOLINA, description="Tipo de combustível"),
