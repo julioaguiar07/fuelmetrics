@@ -134,6 +134,75 @@ async def get_best_price(
         logger.error(f"Erro em /best-price: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@router.get("/debug/best-price-investigation")
+async def debug_best_price_investigation(
+    fuel_type: FuelType = Query(FuelType.GASOLINA, description="Tipo de combustível")
+):
+    """Debug: Investigar porque o melhor preço está errado"""
+    try:
+        processor = get_processor()
+        
+        # Usar apenas dados da última semana
+        latest_data = processor.get_latest_week_data()
+        
+        if latest_data.empty:
+            return {"error": "Nenhum dado da última semana"}
+        
+        # Filtrar por gasolina
+        fuel_df = latest_data[latest_data['PRODUTO_CONSOLIDADO'] == fuel_type.value.upper()]
+        
+        if fuel_df.empty:
+            return {"error": f"Nenhum dado para {fuel_type.value}"}
+        
+        # **ANÁLISE DETALHADA:**
+        
+        # 1. Todas as ocorrências de Aguas Lindas de Goias
+        aguas_lindas = fuel_df[fuel_df['MUNICIPIO'].str.contains('AGUAS LINDAS', case=False, na=False)]
+        
+        # 2. Top 10 menores preços médios
+        top_10_avg = fuel_df.nsmallest(10, 'PRECO_MEDIO_REVENDA')[['MUNICIPIO', 'ESTADO', 'PRECO_MEDIO_REVENDA', 'PRECO_MINIMO_REVENDA', 'NUMERO_DE_POSTOS_PESQUISADOS', 'PRODUTO']]
+        
+        # 3. Top 10 menores preços mínimos  
+        top_10_min = fuel_df.nsmallest(10, 'PRECO_MINIMO_REVENDA')[['MUNICIPIO', 'ESTADO', 'PRECO_MEDIO_REVENDA', 'PRECO_MINIMO_REVENDA', 'NUMERO_DE_POSTOS_PESQUISADOS', 'PRODUTO']]
+        
+        # 4. Agrupamento por cidade para ver média
+        city_grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO']).agg({
+            'PRECO_MEDIO_REVENDA': 'mean',
+            'PRECO_MINIMO_REVENDA': 'min',
+            'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
+        }).reset_index()
+        
+        # Top 10 cidades com menor preço médio (agrupado)
+        top_10_cities_avg = city_grouped.nsmallest(10, 'PRECO_MEDIO_REVENDA')
+        
+        # Top 10 cidades com menor preço mínimo (agrupado)
+        top_10_cities_min = city_grouped.nsmallest(10, 'PRECO_MINIMO_REVENDA')
+        
+        return {
+            "investigation_for": fuel_type.value,
+            "latest_week_date": str(processor.get_latest_data_timestamp()),
+            "total_records_last_week": len(fuel_df),
+            
+            "aguas_lindas_details": aguas_lindas[['PRODUTO', 'PRECO_MEDIO_REVENDA', 'PRECO_MINIMO_REVENDA', 'NUMERO_DE_POSTOS_PESQUISADOS']].to_dict('records') if len(aguas_lindas) > 0 else "Não encontrado",
+            
+            "top_10_lowest_avg_prices": top_10_avg.to_dict('records'),
+            "top_10_lowest_min_prices": top_10_min.to_dict('records'),
+            
+            "top_10_cities_lowest_avg": top_10_cities_avg.to_dict('records'),
+            "top_10_cities_lowest_min": top_10_cities_min.to_dict('records'),
+            
+            "potential_issues": [
+                "Verificar se está usando dados corretos (última semana)",
+                "Verificar agrupamento por cidade (GASOLINA COMUM vs ADITIVADA)",
+                "Verificar filtro de número mínimo de postos"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em /debug/best-price-investigation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/debug/latest-dates")
 async def debug_latest_dates():
     """Debug: Verificar datas dos dados"""
