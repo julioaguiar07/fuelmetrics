@@ -519,7 +519,7 @@ async def get_today_summary(
             worst_price=worst_price,
             potential_saving=round(potential_saving, 3),
             total_stations=total_stations,
-            analysis_date=latest_date if latest_date else datetime.now(),
+            analysis_date=latest_date,
             ranking=ranking,
             national_average=round(national_average, 3),
             data_date=latest_date,
