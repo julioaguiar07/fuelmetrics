@@ -47,7 +47,16 @@ async def compare_cities(
         # VERIFICAÇÃO CRÍTICA: Log das colunas mapeadas
         logger.info(f"DEBUG - Comparando cidades: {city_list}")
         logger.info(f"DEBUG - Colunas mapeadas: {col_map}")
-        logger.info(f"DEBUG - Valores únicos em {col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')}: {df[col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')].unique()[:10]}")
+        
+        # Verificar coluna de produto consolidado
+        produto_col = col_map.get('produto_consolidado', col_map.get('produto', 'PRODUTO_CONSOLIDADO'))
+        logger.info(f"DEBUG - Usando coluna de produto: {produto_col}")
+        
+        if produto_col in df.columns:
+            # Normalizar os nomes dos produtos
+            from app.utils.column_helper import normalize_product_name
+            df['PRODUTO_NORMALIZADO'] = df[produto_col].apply(normalize_product_name)
+            logger.info(f"DEBUG - Produtos normalizados únicos: {df['PRODUTO_NORMALIZADO'].unique()[:10]}")
         
         comparisons = []
         
@@ -64,57 +73,103 @@ async def compare_cities(
                 logger.warning(f"Cidade não encontrada: {city} (normalizado: {city_normalized})")
                 continue
             
-            # Filtrar por tipo de combustível CONSOLIDADO
+            # Filtrar por tipo de combustível NORMALIZADO
             fuel_type_normalized = fuel_type.value.upper()
             
-            # Verificar qual coluna de produto usar
-            produto_col = col_map.get('produto_consolidado', col_map.get('produto', 'PRODUTO_CONSOLIDADO'))
-            
-            fuel_data = city_data[
-                city_data[produto_col].astype(str).str.upper() == fuel_type_normalized
-            ]
+            # Usar coluna normalizada se existir, senão usar a original
+            if 'PRODUTO_NORMALIZADO' in city_data.columns:
+                fuel_data = city_data[
+                    city_data['PRODUTO_NORMALIZADO'] == fuel_type_normalized
+                ]
+            else:
+                fuel_data = city_data[
+                    city_data[produto_col].astype(str).str.upper() == fuel_type_normalized
+                ]
             
             # Se vazio, tentar variações para diesel
             if fuel_data.empty and fuel_type.value in ['diesel', 'diesel_s10']:
                 if fuel_type.value == 'diesel':
-                    fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL', case=False, na=False)]
+                    if 'PRODUTO_NORMALIZADO' in city_data.columns:
+                        fuel_data = city_data[city_data['PRODUTO_NORMALIZADO'] == 'DIESEL']
+                    else:
+                        fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL', case=False, na=False)]
                 elif fuel_type.value == 'diesel_s10':
-                    fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
+                    if 'PRODUTO_NORMALIZADO' in city_data.columns:
+                        fuel_data = city_data[city_data['PRODUTO_NORMALIZADO'] == 'DIESEL_S10']
+                    else:
+                        fuel_data = city_data[city_data[produto_col].astype(str).str.contains('DIESEL_S10', case=False, na=False)]
             
             if fuel_data.empty:
                 logger.warning(f"Nenhum dado de {fuel_type.value} para {city}")
-                logger.warning(f"Valores disponíveis: {city_data[produto_col].unique()}")
+                if 'PRODUTO_NORMALIZADO' in city_data.columns:
+                    available_fuels = city_data['PRODUTO_NORMALIZADO'].unique()
+                else:
+                    available_fuels = city_data[produto_col].unique()
+                logger.warning(f"Valores disponíveis: {available_fuels}")
                 continue
             
-            # Calcular estatísticas APENAS COM DADOS RECENTES
-            avg_price = float(fuel_data[col_map['preco_medio_revenda']].mean())
-            min_price = float(fuel_data[col_map['preco_medio_revenda']].min())
-            max_price = float(fuel_data[col_map['preco_medio_revenda']].max())
-            total_stations = int(fuel_data[col_map['numero_de_postos_pesquisados']].sum())
+            # Obter colunas corretas
+            preco_col = col_map.get('preco_medio_revenda', 'PRECO_MEDIO_REVENDA')
+            postos_col = col_map.get('numero_de_postos_pesquisados', 'NUMERO_DE_POSTOS_PESQUISADOS')
+            estado_col = col_map.get('estado', 'ESTADO')
+            regiao_col = col_map.get('regiao', 'REGIAO')
             
-            # Log para debug
-            logger.info(f"DEBUG - {city}: {len(fuel_data)} registros, preço médio: {avg_price}")
+            # Garantir que temos valores válidos
+            if fuel_data.empty or preco_col not in fuel_data.columns:
+                logger.error(f"Dados inválidos para {city}: DataFrame vazio ou sem coluna de preço")
+                continue
             
-            fuels_data = {
-                fuel_type.value: {
-                    'avg': round(avg_price, 3),
-                    'min': round(min_price, 3),
-                    'max': round(max_price, 3),
-                    'stations': total_stations,
-                    'std': float(fuel_data[col_map['preco_medio_revenda']].std())
+            try:
+                # Calcular estatísticas com verificações de segurança
+                avg_price = float(fuel_data[preco_col].mean())
+                min_price = float(fuel_data[preco_col].min())
+                max_price = float(fuel_data[preco_col].max())
+                
+                # Garantir que temos coluna de postos
+                if postos_col in fuel_data.columns:
+                    total_stations = int(fuel_data[postos_col].sum())
+                else:
+                    total_stations = len(fuel_data)
+                
+                # Log para debug
+                logger.info(f"DEBUG - {city}: {len(fuel_data)} registros, preço médio: {avg_price}")
+                
+                # Criar objeto de combustível
+                fuels_data = {
+                    fuel_type.value: {
+                        'avg': round(avg_price, 3),
+                        'min': round(min_price, 3),
+                        'max': round(max_price, 3),
+                        'stations': total_stations,
+                        'std': float(fuel_data[preco_col].std()) if len(fuel_data) > 1 else 0.0
+                    }
                 }
-            }
-            
-            comparisons.append(CityComparison(
-                city=city_normalized,
-                state=str(fuel_data.iloc[0][col_map['estado']]),
-                region=str(fuel_data.iloc[0][col_map['regiao']]),
-                fuels=fuels_data,
-                overall_stats={
-                    'total_stations': total_stations,
-                    'city_count': 1
-                }
-            ))
+                
+                # Obter estado e região
+                estado = ""
+                regiao = ""
+                if not fuel_data.empty:
+                    if estado_col in fuel_data.columns:
+                        estado = str(fuel_data.iloc[0][estado_col])
+                    if regiao_col in fuel_data.columns:
+                        regiao = str(fuel_data.iloc[0][regiao_col])
+                
+                # Criar objeto de comparação
+                comparison = CityComparison(
+                    city=city_normalized,
+                    state=estado,
+                    region=regiao,
+                    fuels=fuels_data,
+                    overall_stats={
+                        'total_stations': total_stations,
+                        'city_count': 1
+                    }
+                )
+                comparisons.append(comparison)
+                
+            except Exception as calc_error:
+                logger.error(f"Erro ao calcular estatísticas para {city}: {calc_error}")
+                continue
         
         if len(comparisons) < 2:
             raise HTTPException(
