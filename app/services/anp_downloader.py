@@ -215,7 +215,7 @@ class ANPDownloader:
         logger.info(f"Produtos únicos após normalização: {df['PRODUTO_CONSOLIDADO'].unique()}")
         
         return df
-        RESUMO FINAL 
+
     def load_data(self):
         """Carrega dados do Excel para DataFrame - VERSÃO FINAL CORRIGIDA"""
         filepath = self.download_file()
