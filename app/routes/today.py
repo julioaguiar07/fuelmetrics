@@ -74,7 +74,7 @@ async def get_best_price(
     try:
         processor = get_processor()
         
-        # **CORREÇÃO: Usar apenas dados da última semana**
+        # Usar apenas dados da última semana
         latest_data = processor.get_latest_week_data()
         
         if latest_data.empty:
@@ -93,33 +93,38 @@ async def get_best_price(
                 detail=f"Nenhum dado encontrado para {fuel_type.value} na última semana"
             )
         
-        # Encontrar melhor preço
-        price_column = 'PRECO_MEDIO_REVENDA' if 'PRECO_MEDIO_REVENDA' in fuel_df.columns else 'PRECO MEDIO REVENDA'
-        if price_column not in fuel_df.columns:
-            # Tentar encontrar qualquer coluna com preço
-            for col in fuel_df.columns:
-                if 'preco' in col.lower() or 'price' in col.lower():
-                    price_column = col
-                    break
+        # **CORREÇÃO: Considerar apenas registros com pelo menos 5 postos**
+        fuel_df_reliable = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= 5].copy()
         
-        best_idx = fuel_df[price_column].idxmin()
-        best_row = fuel_df.loc[best_idx]
+        if fuel_df_reliable.empty:
+            logger.warning(f"Nenhum registro com pelo menos 5 postos. Usando todos os dados.")
+            fuel_df_reliable = fuel_df
+        
+        # **CORREÇÃO: Agrupar por cidade para média entre tipos de gasolina**
+        city_grouped = fuel_df_reliable.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
+            'PRECO_MEDIO_REVENDA': 'mean',
+            'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
+        }).reset_index()
+        
+        # Encontrar melhor preço
+        best_idx = city_grouped['PRECO_MEDIO_REVENDA'].idxmin()
+        best_row = city_grouped.loc[best_idx]
         
         # Construir resposta
         result = {
-            'price': float(best_row[price_column]),
-            'city': str(best_row.get('MUNICIPIO', '')),
-            'state': str(best_row.get('ESTADO_SIGLA', best_row.get('ESTADO', ''))),
-            'region': str(best_row.get('REGIAO', '')),
+            'price': float(best_row['PRECO_MEDIO_REVENDA']),
+            'city': str(best_row['MUNICIPIO']),
+            'state': str(best_row['ESTADO_SIGLA']),
+            'region': str(best_row['REGIAO']),
             'fuel_type': fuel_type.value,
-            'stations_count': int(best_row.get('NUMERO_DE_POSTOS_PESQUISADOS', 0)),
-            'price_band': best_row.get('FAIXA_PRECO', 'MEDIO') if 'FAIXA_PRECO' in best_row else 'MEDIO'
+            'stations_count': int(best_row['NUMERO_DE_POSTOS_PESQUISADOS']),
+            'price_band': 'BAIXO'
         }
         
-        # Adicionar coordenadas se disponíveis
-        if 'LATITUDE' in best_row and 'LONGITUDE' in best_row:
-            result['latitude'] = float(best_row['LATITUDE'])
-            result['longitude'] = float(best_row['LONGITUDE'])
+        # Adicionar coordenadas
+        coords = processor._estimate_coordinates(best_row['MUNICIPIO'], best_row['ESTADO_SIGLA'])
+        result['latitude'] = coords['latitude']
+        result['longitude'] = coords['longitude']
         
         return result
         
