@@ -646,7 +646,7 @@ class DataProcessor:
 
     
     def get_latest_week_data(self):
-        """Retorna apenas os dados da última semana disponível (DATA_FINAL mais recente)"""
+        """Retorna apenas os dados da última semana disponível"""
         if self.df.empty or 'DATA_FINAL' not in self.df.columns:
             return self.df
         
@@ -654,31 +654,13 @@ class DataProcessor:
         if not pd.api.types.is_datetime64_any_dtype(self.df['DATA_FINAL']):
             self.df['DATA_FINAL'] = pd.to_datetime(self.df['DATA_FINAL'], errors='coerce')
         
-        # **CORREÇÃO: Não permitir datas futuras**
-        today = pd.Timestamp.now().normalize()
+        # **SIMPLES: Pegar a data mais recente**
+        latest_date = self.df['DATA_FINAL'].max()
         
-        # Filtrar fora quaisquer dados com DATA_FINAL > hoje
-        valid_data = self.df[self.df['DATA_FINAL'] <= today].copy()
+        # Filtrar dados da última semana
+        latest_week_data = self.df[self.df['DATA_FINAL'] == latest_date].copy()
         
-        if valid_data.empty:
-            logger.warning("Nenhum dado com DATA_FINAL <= hoje. Usando todos os dados.")
-            valid_data = self.df.copy()
-        
-        # Agora pegar a DATA_FINAL mais recente DENTRO das datas válidas
-        latest_date = valid_data['DATA_FINAL'].max()
-        
-        # Filtrar dados da última semana (DATA_FINAL mais recente)
-        latest_week_data = valid_data[valid_data['DATA_FINAL'] == latest_date].copy()
-        
-        logger.info(f"Dados da última semana: {len(latest_week_data)} registros")
-        logger.info(f"Data dos dados (DATA_FINAL): {latest_date}")
-        logger.info(f"Data de hoje: {today}")
-        
-        # **VERIFICAÇÃO CRÍTICA: A data deve ser realista**
-        # Se a data mais recente for muito no passado (> 30 dias), avisar
-        days_diff = (today - latest_date.date()).days
-        if days_diff > 30:
-            logger.warning(f"⚠️ ATENÇÃO: Dados estão desatualizados! Última data: {latest_date.date()} ({days_diff} dias atrás)")
+        logger.info(f"Dados da última semana: {len(latest_week_data)} registros (DATA_FINAL: {latest_date})")
         
         return latest_week_data
     
