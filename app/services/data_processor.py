@@ -646,17 +646,40 @@ class DataProcessor:
 
     
     def get_latest_week_data(self):
-        """Retorna apenas os dados da última semana disponível"""
+        """Retorna apenas os dados da última semana disponível (DATA_FINAL mais recente)"""
         if self.df.empty or 'DATA_FINAL' not in self.df.columns:
             return self.df
         
-        # Encontrar a data mais recente
-        latest_date = self.df['DATA_FINAL'].max()
+        # Garantir que DATA_FINAL é datetime
+        if not pd.api.types.is_datetime64_any_dtype(self.df['DATA_FINAL']):
+            self.df['DATA_FINAL'] = pd.to_datetime(self.df['DATA_FINAL'], errors='coerce')
         
-        # Filtrar apenas dados da última semana
-        latest_week_data = self.df[self.df['DATA_FINAL'] == latest_date].copy()
+        # **CORREÇÃO: Não permitir datas futuras**
+        today = pd.Timestamp.now().normalize()
         
-        logger.info(f"Dados da última semana: {len(latest_week_data)} registros (data: {latest_date})")
+        # Filtrar fora quaisquer dados com DATA_FINAL > hoje
+        valid_data = self.df[self.df['DATA_FINAL'] <= today].copy()
+        
+        if valid_data.empty:
+            logger.warning("Nenhum dado com DATA_FINAL <= hoje. Usando todos os dados.")
+            valid_data = self.df.copy()
+        
+        # Agora pegar a DATA_FINAL mais recente DENTRO das datas válidas
+        latest_date = valid_data['DATA_FINAL'].max()
+        
+        # Filtrar dados da última semana (DATA_FINAL mais recente)
+        latest_week_data = valid_data[valid_data['DATA_FINAL'] == latest_date].copy()
+        
+        logger.info(f"Dados da última semana: {len(latest_week_data)} registros")
+        logger.info(f"Data dos dados (DATA_FINAL): {latest_date}")
+        logger.info(f"Data de hoje: {today}")
+        
+        # **VERIFICAÇÃO CRÍTICA: A data deve ser realista**
+        # Se a data mais recente for muito no passado (> 30 dias), avisar
+        days_diff = (today - latest_date.date()).days
+        if days_diff > 30:
+            logger.warning(f"⚠️ ATENÇÃO: Dados estão desatualizados! Última data: {latest_date.date()} ({days_diff} dias atrás)")
+        
         return latest_week_data
     
     def get_latest_data_timestamp(self):
