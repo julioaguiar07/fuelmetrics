@@ -62,12 +62,12 @@ class DataProcessor:
             
             if 'NUMERO_DE_POSTOS_PESQUISADOS' in self.df.columns:
                 self.df['NUMERO_DE_POSTOS_PESQUISADOS'] = pd.to_numeric(
-                    self.df['NUMERO_DE_POSTOS_PESQUisADOS'], errors='coerce'
+                    self.df['NUMERO_DE_POSTOS_PESQUISADOS'], errors='coerce'
                 ).fillna(1).astype(int)
             else:
                 self.df['NUMERO_DE_POSTOS_PESQUISADOS'] = 1
             
-            # Remover registros com preço inválido (APENAS NaN ou <= 0)
+            # Remover registros com preço inválido
             self.df = self.df.dropna(subset=['PRECO_MEDIO_REVENDA'])
             self.df = self.df[self.df['PRECO_MEDIO_REVENDA'] > 0]
             
@@ -191,14 +191,12 @@ class DataProcessor:
             logger.info(f"Produtos originais: {list(unique_products)}")
             logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
             
-            # NÃO REMOVER DUPLICATAS - MANTER DADOS HISTÓRICOS
-            # Apenas remover duplicatas exatas (todos os campos iguais)
-            initial_len = len(self.df)
-            self.df = self.df.drop_duplicates()  # Remove apenas linhas completamente idênticas
-            removed_exact_dups = initial_len - len(self.df)
-            
-            if removed_exact_dups > 0:
-                logger.info(f"Removidas {removed_exact_dups} duplicatas exatas")
+            # Remover duplicatas (mantendo o menor preço)
+            self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
+            self.df = self.df.drop_duplicates(
+                subset=['MUNICIPIO', 'ESTADO', 'PRODUTO_CONSOLIDADO'],
+                keep='first'
+            )
             
             final_count = len(self.df)
             logger.info(
@@ -210,12 +208,6 @@ class DataProcessor:
             logger.info(f"Municípios únicos: {self.df['MUNICIPIO'].nunique()}")
             logger.info(f"Estados únicos: {self.df['ESTADO'].nunique()}")
             logger.info(f"Produtos únicos: {self.df['PRODUTO_CONSOLIDADO'].unique()}")
-            
-            # Log de contagem por produto consolidado
-            for produto in self.df['PRODUTO_CONSOLIDADO'].unique():
-                count = len(self.df[self.df['PRODUTO_CONSOLIDADO'] == produto])
-                logger.info(f"  {produto}: {count} registros")
-            
             logger.info(f"Preço médio geral: R$ {self.df['PRECO_MEDIO_REVENDA'].mean():.2f}")
             
         except Exception as e:
