@@ -163,7 +163,7 @@ class ANPDownloader:
             
         except Exception as e:
             logger.error(f"Erro ao salvar metadados: {e}")
-        
+    
     def _calculate_file_hash(self, filepath: Path) -> str:
         """Calcula hash do arquivo para verificação de integridade"""
         try:
@@ -176,8 +176,46 @@ class ANPDownloader:
         except Exception as e:
             logger.error(f"Erro ao calcular hash: {e}")
             return ""
-
     
+    def normalize_product_names_in_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        """Normaliza os nomes dos produtos no DataFrame"""
+        if df.empty or 'PRODUTO' not in df.columns:
+            return df
+        
+        # Criar cópia para evitar warnings
+        df = df.copy()
+        
+        # Normalizar nomes
+        df['PRODUTO'] = df['PRODUTO'].astype(str).str.upper().str.strip()
+        
+        # Criar coluna consolidada se não existir
+        if 'PRODUTO_CONSOLIDADO' not in df.columns:
+            df['PRODUTO_CONSOLIDADO'] = df['PRODUTO']
+        
+        # Aplicar mapeamento
+        product_mapping = {
+            'OLEO DIESEL': 'DIESEL',
+            'ÓLEO DIESEL': 'DIESEL',
+            'DIESEL': 'DIESEL',
+            'OLEO DIESEL S10': 'DIESEL_S10',
+            'ÓLEO DIESEL S10': 'DIESEL_S10',
+            'DIESEL S10': 'DIESEL_S10',
+            'DIESEL_S10': 'DIESEL_S10',
+            'GASOLINA COMUM': 'GASOLINA',
+            'GASOLINA': 'GASOLINA',
+            'ETANOL HIDRATADO': 'ETANOL',
+            'ETANOL': 'ETANOL',
+            'GNV': 'GNV',
+        }
+        
+        for original, consolidated in product_mapping.items():
+            mask = df['PRODUTO_CONSOLIDADO'].str.contains(original.upper(), na=False)
+            df.loc[mask, 'PRODUTO_CONSOLIDADO'] = consolidated
+        
+        logger.info(f"Produtos únicos após normalização: {df['PRODUTO_CONSOLIDADO'].unique()}")
+        
+        return df
+        RESUMO FINAL 
     def load_data(self):
         """Carrega dados do Excel para DataFrame - VERSÃO FINAL CORRIGIDA"""
         filepath = self.download_file()
@@ -377,6 +415,9 @@ class ANPDownloader:
             # **IMPORTANTE: Verificar se temos dados**
             logger.info(f"\n=== RESUMO FINAL ===")
             logger.info(f"Total de registros: {len(df)}")
+            # NORMALIZAR NOMES DOS PRODUTOS
+            df = self.normalize_product_names_in_dataframe(df)
+            logger.info(f"Produtos consolidados únicos: {df['PRODUTO_CONSOLIDADO'].unique()}")
             
             if 'PRODUTO' in df.columns and len(df) > 0:
                 produtos_finais = df['PRODUTO'].unique()
