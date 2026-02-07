@@ -177,7 +177,7 @@ class ANPDownloader:
             logger.error(f"Erro ao calcular hash: {e}")
             return ""
     
-    def normalize_product_names_in_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    def normalize_product_names_in_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normaliza os nomes dos produtos no DataFrame"""
         if df.empty or 'PRODUTO' not in df.columns:
             return df
@@ -191,6 +191,9 @@ class ANPDownloader:
         # Criar coluna consolidada se não existir
         if 'PRODUTO_CONSOLIDADO' not in df.columns:
             df['PRODUTO_CONSOLIDADO'] = df['PRODUTO']
+        else:
+            # Garantir que a coluna consolidada está em maiúsculas
+            df['PRODUTO_CONSOLIDADO'] = df['PRODUTO_CONSOLIDADO'].astype(str).str.upper().str.strip()
         
         # Aplicar mapeamento
         product_mapping = {
@@ -206,13 +209,26 @@ class ANPDownloader:
             'ETANOL HIDRATADO': 'ETANOL',
             'ETANOL': 'ETANOL',
             'GNV': 'GNV',
+            'GLP': 'GLP',
+            'GASOLINA ADITIVADA': 'GASOLINA',
         }
         
+        # Primeiro, aplicar mapeamento direto
         for original, consolidated in product_mapping.items():
-            mask = df['PRODUTO_CONSOLIDADO'].str.contains(original.upper(), na=False)
+            mask = df['PRODUTO_CONSOLIDADO'].astype(str).str.contains(original, na=False)
+            df.loc[mask, 'PRODUTO_CONSOLIDADO'] = consolidated
+        
+        # Também verificar na coluna PRODUTO original
+        for original, consolidated in product_mapping.items():
+            mask = df['PRODUTO'].astype(str).str.contains(original, na=False)
             df.loc[mask, 'PRODUTO_CONSOLIDADO'] = consolidated
         
         logger.info(f"Produtos únicos após normalização: {df['PRODUTO_CONSOLIDADO'].unique()}")
+        
+        # Mostrar contagem
+        for produto in df['PRODUTO_CONSOLIDADO'].unique():
+            count = len(df[df['PRODUTO_CONSOLIDADO'] == produto])
+            logger.info(f"  - {produto}: {count} registros")
         
         return df
 
