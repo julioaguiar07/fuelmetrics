@@ -49,93 +49,88 @@ async def compare_cities(
         logger.info(f"DEBUG - Fuel type: {fuel_type.value}")
         logger.info(f"DEBUG - Colunas mapeadas: {col_map}")
         
-        # Verificar coluna de produto consolidado
-        produto_col = col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')
-        logger.info(f"DEBUG - Usando coluna de produto: {produto_col}")
-        
-        # Verificar produtos disponíveis
-        if produto_col in df.columns:
-            produtos_disponiveis = df[produto_col].unique()
-            logger.info(f"DEBUG - Produtos disponíveis em {produto_col}: {produtos_disponiveis}")
-        else:
-            logger.error(f"DEBUG - Coluna {produto_col} não encontrada no DataFrame")
-            logger.error(f"DEBUG - Colunas disponíveis: {list(df.columns)}")
-        
-        # Normalizar coluna de municípios no DataFrame para busca
+        # Obter colunas
         municipio_col = col_map.get('municipio', 'MUNICIPIO')
-        df['MUNICIPIO_NORMALIZED'] = df[municipio_col].apply(normalize_city_name)
+        produto_col = col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')
+        preco_col = col_map.get('preco_medio_revenda', 'PRECO_MEDIO_REVENDA')
+        postos_col = col_map.get('numero_de_postos_pesquisados', 'NUMERO_DE_POSTOS_PESQUISADOS')
+        estado_col = col_map.get('estado', 'ESTADO')
+        regiao_col = col_map.get('regiao', 'REGIAO')
+        
+        logger.info(f"DEBUG - Coluna município: {municipio_col}")
+        logger.info(f"DEBUG - Coluna produto: {produto_col}")
+        
+        # Verificar municípios disponíveis
+        available_cities = df[municipio_col].unique()
+        logger.info(f"DEBUG - Primeiros 20 municípios disponíveis: {available_cities[:20]}")
         
         comparisons = []
         found_cities = []
         
         for city in city_list:
-            # Normalizar nome da cidade
-            city_normalized = normalize_city_name(city)
-            logger.info(f"DEBUG - Buscando cidade: '{city}' -> '{city_normalized}'")
+            city_upper = city.upper().strip()
+            logger.info(f"DEBUG - Buscando cidade: '{city}' -> '{city_upper}'")
             
-            # Filtrar dados da cidade
-            city_mask = df['MUNICIPIO_NORMALIZED'] == city_normalized
-            city_data = df[city_mask]
+            # BUSCAR CIDADE - Múltiplas estratégias
+            city_data = None
             
-            if city_data.empty:
-                # Tentar busca parcial
-                city_mask = df['MUNICIPIO_NORMALIZED'].str.contains(city_normalized, na=False)
-                city_data = df[city_mask]
-                
-                if city_data.empty:
-                    # Tentar sem normalização
-                    city_mask = df[municipio_col].astype(str).str.upper() == city.upper()
-                    city_data = df[city_mask]
-                    
-                    if city_data.empty:
-                        logger.warning(f"Cidade não encontrada: {city} (normalizado: {city_normalized})")
-                        available_cities = df[municipio_col].unique()
-                        cidades_similares = [c for c in available_cities if city_normalized[:4] in str(c).upper()]
-                        logger.warning(f"Cidades similares disponíveis: {cidades_similares[:5]}")
-                        continue
+            # 1. Match exato (MAIÚSCULAS)
+            mask_exact = df[municipio_col].astype(str).str.upper() == city_upper
+            if mask_exact.any():
+                city_data = df[mask_exact]
+                logger.info(f"DEBUG - Encontrado por match exato: {city_upper}")
             
-            found_cities.append(city_normalized)
+            # 2. Se não encontrou, tentar normalização
+            if city_data is None or city_data.empty:
+                from app.utils.column_helper import normalize_city_name
+                city_normalized = normalize_city_name(city)
+                mask_normalized = df[municipio_col].apply(normalize_city_name) == city_normalized
+                if mask_normalized.any():
+                    city_data = df[mask_normalized]
+                    logger.info(f"DEBUG - Encontrado por normalização: {city_normalized}")
+            
+            # 3. Se ainda não encontrou, tentar busca parcial
+            if city_data is None or city_data.empty:
+                mask_partial = df[municipio_col].astype(str).str.contains(city_upper, case=False, na=False)
+                if mask_partial.any():
+                    city_data = df[mask_partial]
+                    logger.info(f"DEBUG - Encontrado por busca parcial: {city_upper}")
+            
+            if city_data is None or city_data.empty:
+                logger.warning(f"Cidade não encontrada: {city}")
+                logger.warning(f"Cidades similares disponíveis: {[c for c in available_cities if city_upper in str(c).upper()][:5]}")
+                continue
+            
+            found_cities.append(city_upper)
             logger.info(f"DEBUG - {city}: encontrados {len(city_data)} registros")
+            
+            # Verificar combustíveis disponíveis
+            if produto_col in city_data.columns:
+                combustiveis_disponiveis = city_data[produto_col].unique()
+                logger.info(f"DEBUG - Combustíveis disponíveis para {city}: {combustiveis_disponiveis}")
+            else:
+                logger.error(f"Coluna {produto_col} não encontrada")
+                continue
             
             # Filtrar por tipo de combustível
             fuel_type_normalized = fuel_type.value.upper()
+            if fuel_type.value == 'diesel_s10':
+                fuel_type_normalized = 'DIESEL_S10'
             
-            # Verificar se temos dados do combustível específico
-            if produto_col in city_data.columns:
-                # Verificar quais combustíveis estão disponíveis para esta cidade
-                combustiveis_disponiveis = city_data[produto_col].unique()
-                logger.info(f"DEBUG - Combustíveis disponíveis para {city}: {combustiveis_disponiveis}")
-                
-                # Filtrar pelo combustível específico
-                fuel_data = city_data[city_data[produto_col] == fuel_type_normalized]
-                
-                # Se não encontrou, tentar variações
-                if fuel_data.empty and fuel_type.value in ['diesel', 'diesel_s10']:
-                    logger.info(f"DEBUG - Tentando variações para {fuel_type.value}")
-                    if fuel_type.value == 'diesel':
-                        fuel_data = city_data[city_data[produto_col] == 'DIESEL']
-                    elif fuel_type.value == 'diesel_s10':
-                        fuel_data = city_data[city_data[produto_col] == 'DIESEL_S10']
-                
-                logger.info(f"DEBUG - {city}: {len(fuel_data)} registros de {fuel_type_normalized}")
-                
-                if fuel_data.empty:
-                    logger.warning(f"Nenhum dado de {fuel_type.value} para {city}")
-                    logger.warning(f"Combustíveis disponíveis: {combustiveis_disponiveis}")
-                    continue
-            else:
-                logger.error(f"Coluna {produto_col} não encontrada nos dados de {city}")
-                continue
+            fuel_data = city_data[city_data[produto_col] == fuel_type_normalized]
             
-            # Obter colunas corretas
-            preco_col = col_map.get('preco_medio_revenda', 'PRECO_MEDIO_REVENDA')
-            postos_col = col_map.get('numero_de_postos_pesquisados', 'NUMERO_DE_POSTOS_PESQUISADOS')
-            estado_col = col_map.get('estado', 'ESTADO')
-            regiao_col = col_map.get('regiao', 'REGIAO')
+            # Se não encontrou, tentar variações para diesel
+            if fuel_data.empty and fuel_type.value in ['diesel', 'diesel_s10']:
+                if fuel_type.value == 'diesel':
+                    fuel_data = city_data[city_data[produto_col] == 'DIESEL']
+                elif fuel_type.value == 'diesel_s10':
+                    fuel_data = city_data[city_data[produto_col] == 'DIESEL_S10']
             
-            # Verificar se temos coluna de preço
-            if preco_col not in fuel_data.columns:
-                logger.error(f"Coluna de preço {preco_col} não encontrada")
+            logger.info(f"DEBUG - {city}: {len(fuel_data)} registros de {fuel_type_normalized}")
+            
+            if fuel_data.empty:
+                logger.warning(f"Nenhum dado de {fuel_type.value} para {city}")
+                logger.warning(f"Combustíveis disponíveis: {combustiveis_disponiveis}")
                 continue
             
             # Calcular estatísticas
@@ -156,7 +151,7 @@ async def compare_cities(
                 else:
                     price_std = 0.0
                 
-                logger.info(f"DEBUG - {city}: {len(fuel_data)} registros, preço médio: {avg_price}")
+                logger.info(f"DEBUG - {city}: preço médio: {avg_price}, estações: {total_stations}")
                 
                 # Obter estado e região
                 estado = ""
@@ -180,7 +175,7 @@ async def compare_cities(
                 
                 # Criar objeto de comparação
                 comparison = CityComparison(
-                    city=city_normalized,
+                    city=city_upper,
                     state=estado,
                     region=regiao,
                     fuels=fuels_data,
