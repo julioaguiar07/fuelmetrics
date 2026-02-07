@@ -622,7 +622,30 @@ class DataProcessor:
                 )
             else:
                 return "pode_esperar", "Preços estáveis sem tendência definida."
+
     
+    def get_latest_week_data(self):
+        """Retorna apenas os dados da última semana disponível"""
+        if self.df.empty or 'DATA_FINAL' not in self.df.columns:
+            return self.df
+        
+        # Encontrar a data mais recente
+        latest_date = self.df['DATA_FINAL'].max()
+        
+        # Filtrar apenas dados da última semana
+        latest_week_data = self.df[self.df['DATA_FINAL'] == latest_date].copy()
+        
+        logger.info(f"Dados da última semana: {len(latest_week_data)} registros (data: {latest_date})")
+        return latest_week_data
+    
+    def get_latest_data_timestamp(self):
+        """Retorna timestamp dos dados mais recentes (DATA_FINAL)"""
+        if self.df.empty or 'DATA_FINAL' not in self.df.columns:
+            return None
+        
+        latest_date = self.df['DATA_FINAL'].max()
+        return latest_date
+
     def _calculate_confidence_level(self, sample_size, volatility):
         """Calcula nível de confiança da análise"""
         # Baseado no tamanho da amostra
