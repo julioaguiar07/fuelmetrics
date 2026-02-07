@@ -1045,6 +1045,17 @@
                     <div class="autocomplete-list" id="autocompleteList" style="display: none;"></div>
                 </div>
 
+                <!-- Fuel Filter for Comparison -->
+                <div class="filters" style="margin-top: var(--spacing-lg);">
+                    <div class="filter-label">Tipo de Combustível para Comparação</div>
+                    <div class="filter-options" id="compareFuelFilter">
+                        <button class="filter-btn active" data-compare-fuel="gasolina">Gasolina</button>
+                        <button class="filter-btn" data-compare-fuel="diesel">Diesel</button>
+                        <button class="filter-btn" data-compare-fuel="diesel_s10">Diesel S10</button>
+                        <button class="filter-btn" data-compare-fuel="gnv">GNV</button>
+                    </div>
+                </div>
+    
                 <!-- Selected Cities -->
                 <div id="selectedCities" class="filters" style="display: none;">
                     <div class="filter-label">Cidades Selecionadas</div>
@@ -1274,7 +1285,8 @@
             trendChart: null,
             isLoading: false
         };
-
+        
+        let compareFuelType = 'gasolina'; // Novo estado para combustível na comparação
         // ============================================
         // FUNÇÕES UTILITÁRIAS
         // ============================================
@@ -1513,10 +1525,12 @@
         // ============================================
         // PÁGINA 2: COMPARAÇÃO DE CIDADES
         // ============================================
-
         async function loadComparePage() {
             // Configurar busca
             setupCitySearch();
+            
+            // Configurar filtro de combustível
+            setupCompareFuelFilter();
             
             // Limpar comparação anterior
             document.getElementById('comparisonGrid').innerHTML = '';
@@ -1531,7 +1545,6 @@
                 <div class="decision-explanation">O sistema comparará os preços médios, mínimos e máximos de cada cidade e indicará qual oferece a melhor economia.</div>
             `;
         }
-
         function setupCitySearch() {
             const searchInput = document.getElementById('citySearch');
             const autocompleteList = document.getElementById('autocompleteList');
@@ -1604,7 +1617,34 @@
                 }
             });
         }
-
+        
+        // Configurar filtros de combustível na comparação
+        function setupCompareFuelFilter() {
+            const fuelButtons = document.querySelectorAll('[data-compare-fuel]');
+            
+            fuelButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Atualizar botões ativos
+                    const parent = btn.closest('.filter-options');
+                    if (parent) {
+                        parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    }
+                    btn.classList.add('active');
+                    
+                    // Atualizar tipo de combustível para comparação
+                    const fuelType = btn.getAttribute('data-compare-fuel');
+                    if (fuelType) {
+                        compareFuelType = fuelType;
+                        
+                        // Se já temos cidades selecionadas, fazer nova comparação
+                        if (appState.selectedCities.length >= 2) {
+                            compareSelectedCities();
+                        }
+                    }
+                });
+            });
+        }
+        
         function addCityToComparison(cityName) {
             if (appState.selectedCities.includes(cityName)) {
                 showNotification(`${cityName} já está na lista de comparação.`, 'warning');
@@ -1660,7 +1700,7 @@
                 cityTags.appendChild(tag);
             });
         }
-
+        
         async function compareSelectedCities() {
             if (appState.selectedCities.length < 2) return;
             
@@ -1669,7 +1709,7 @@
             try {
                 // Obter comparação
                 const citiesParam = appState.selectedCities.join(',');
-                const comparison = await fetchAPI(`${API_ENDPOINTS.COMPARE.CITIES}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${appState.currentFuelType}`);
+                const comparison = await fetchAPI(`${API_ENDPOINTS.COMPARE.CITIES}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${compareFuelType}`);
                 
                 if (!comparison || comparison.length < 2) {
                     showNotification('Dados insuficientes para comparação.', 'error');
@@ -1677,7 +1717,7 @@
                 }
                 
                 // Obter recomendação
-                const recommendation = await fetchAPI(`${API_ENDPOINTS.COMPARE.RECOMMENDATION}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${appState.currentFuelType}`);
+                const recommendation = await fetchAPI(`${API_ENDPOINTS.COMPARE.RECOMMENDATION}?cities=${encodeURIComponent(citiesParam)}&fuel_type=${compareFuelType}`);
                 
                 // Atualizar interface
                 updateComparisonGrid(comparison);
@@ -1697,13 +1737,13 @@
             
             // Encontrar melhor preço
             const bestCity = comparison.reduce((best, current) => {
-                const currentPrice = current.fuels[appState.currentFuelType]?.avg;
-                const bestPrice = best.fuels[appState.currentFuelType]?.avg;
+                const currentPrice = current.fuels[compareFuelType]?.avg;
+                const bestPrice = best.fuels[compareFuelType]?.avg;
                 return currentPrice < bestPrice ? current : best;
             });
             
             comparison.forEach(city => {
-                const fuelData = city.fuels[appState.currentFuelType];
+                const fuelData = city.fuels[compareFuelType];
                 if (!fuelData) return;
                 
                 const isWinner = city.city === bestCity.city;
@@ -1717,6 +1757,9 @@
                 
                 card.innerHTML += `
                     <div class="comparison-city">${city.city}, ${city.state}</div>
+                    <div class="kpi-meta" style="margin-bottom: var(--spacing-md); font-size: 13px; color: var(--color-text-tertiary);">
+                        ${compareFuelType.toUpperCase()}
+                    </div>
                     <div class="comparison-stats">
                         <div class="stat-row">
                             <span class="stat-label">Preço Médio</span>
