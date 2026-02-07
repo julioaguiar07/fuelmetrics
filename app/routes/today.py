@@ -268,6 +268,79 @@ async def get_today_summary(
         logger.error(f"Erro em /summary: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@router.get("/debug/city-data")
+async def debug_city_data(
+    city: str = Query(..., description="Nome da cidade"),
+    fuel_type: str = Query("gasolina", description="Tipo de combustível")
+):
+    """Debug: Verifica se há dados para uma cidade específica"""
+    try:
+        processor = get_processor()
+        df = processor.df
+        
+        logger.info(f"DEBUG - Buscando {city.upper()} para {fuel_type.upper()}")
+        logger.info(f"DEBUG - Colunas disponíveis: {list(df.columns)}")
+        
+        # Normalizar nome da cidade
+        from app.utils.column_helper import normalize_city_name
+        city_normalized = normalize_city_name(city)
+        logger.info(f"DEBUG - Cidade normalizada: {city_normalized}")
+        
+        # Buscar cidade
+        city_mask = df['MUNICIPIO'].str.upper() == city_normalized
+        city_data = df[city_mask]
+        
+        if city_data.empty:
+            # Tentar busca por contém
+            city_mask = df['MUNICIPIO'].str.contains(city.upper(), na=False)
+            city_data = df[city_mask]
+            
+            if city_data.empty:
+                # Tentar sem acentos
+                city_mask = df['MUNICIPIO'].astype(str).apply(normalize_city_name) == city_normalized
+                city_data = df[city_mask]
+        
+        logger.info(f"DEBUG - Registros encontrados: {len(city_data)}")
+        
+        if not city_data.empty:
+            # Verificar produtos disponíveis
+            produtos = city_data['PRODUTO_CONSOLIDADO'].unique()
+            logger.info(f"DEBUG - Produtos disponíveis: {produtos}")
+            
+            # Filtrar por combustível específico
+            fuel_type_normalized = fuel_type.upper()
+            if fuel_type == 'diesel_s10':
+                fuel_type_normalized = 'DIESEL_S10'
+            
+            fuel_data = city_data[city_data['PRODUTO_CONSOLIDADO'] == fuel_type_normalized]
+            logger.info(f"DEBUG - Registros de {fuel_type}: {len(fuel_data)}")
+            
+            if not fuel_data.empty:
+                return {
+                    "found": True,
+                    "city": city_normalized,
+                    "fuel_type": fuel_type,
+                    "records_count": len(fuel_data),
+                    "avg_price": float(fuel_data['PRECO_MEDIO_REVENDA'].mean()),
+                    "min_price": float(fuel_data['PRECO_MEDIO_REVENDA'].min()),
+                    "max_price": float(fuel_data['PRECO_MEDIO_REVENDA'].max()),
+                    "total_stations": int(fuel_data['NUMERO_DE_POSTOS_PESQUISADOS'].sum()),
+                    "sample_data": fuel_data[['PRODUTO', 'PRODUTO_CONSOLIDADO', 'PRECO_MEDIO_REVENDA', 'NUMERO_DE_POSTOS_PESQUISADOS']].head(5).to_dict('records')
+                }
+        
+        return {
+            "found": False,
+            "city": city_normalized,
+            "fuel_type": fuel_type,
+            "available_fuels": list(city_data['PRODUTO_CONSOLIDADO'].unique()) if not city_data.empty else [],
+            "all_cities_sample": df['MUNICIPIO'].unique()[:20].tolist() if 'MUNICIPIO' in df.columns else []
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro em /debug/city-data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats")
 async def get_general_stats():
     """Retorna estatísticas gerais do sistema"""
