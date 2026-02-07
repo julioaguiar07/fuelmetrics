@@ -93,38 +93,68 @@ async def get_best_price(
                 detail=f"Nenhum dado encontrado para {fuel_type.value} na última semana"
             )
         
-        # **CORREÇÃO: Considerar apenas registros com pelo menos 5 postos**
-        fuel_df_reliable = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= 5].copy()
+        # **FILTRO DE CONFIABILIDADE**
+        MIN_POSTOS_CONFIAVEL = 5
+        MIN_POSTOS_POR_CIDADE = 10
         
-        if fuel_df_reliable.empty:
-            logger.warning(f"Nenhum registro com pelo menos 5 postos. Usando todos os dados.")
-            fuel_df_reliable = fuel_df
+        # 1. Filtrar registros com poucos postos
+        fuel_df_confiavel = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_CONFIAVEL].copy()
         
-        # **CORREÇÃO: Agrupar por cidade para média entre tipos de gasolina**
-        city_grouped = fuel_df_reliable.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
+        if fuel_df_confiavel.empty:
+            logger.warning(f"Nenhum registro com pelo menos {MIN_POSTOS_CONFIAVEL} postos. Reduzindo para 3.")
+            MIN_POSTOS_CONFIAVEL = 3
+            fuel_df_confiavel = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_CONFIAVEL].copy()
+        
+        if fuel_df_confiavel.empty:
+            logger.warning("Usando todos os dados")
+            fuel_df_confiavel = fuel_df
+        
+        # 2. Agrupar por cidade
+        city_grouped = fuel_df_confiavel.groupby(['MUNICIPIO', 'ESTADO', 'REGIAO']).agg({
             'PRECO_MEDIO_REVENDA': 'mean',
             'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
         }).reset_index()
         
-        # Encontrar melhor preço
-        best_idx = city_grouped['PRECO_MEDIO_REVENDA'].idxmin()
-        best_row = city_grouped.loc[best_idx]
+        # 3. Filtrar cidades com poucos postos totais
+        city_grouped_confiavel = city_grouped[city_grouped['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_POR_CIDADE].copy()
+        
+        if city_grouped_confiavel.empty:
+            logger.warning(f"Nenhuma cidade com pelo menos {MIN_POSTOS_POR_CIDADE} postos. Reduzindo para 5.")
+            MIN_POSTOS_POR_CIDADE = 5
+            city_grouped_confiavel = city_grouped[city_grouped['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_POR_CIDADE].copy()
+        
+        if city_grouped_confiavel.empty:
+            logger.warning("Usando todas as cidades")
+            city_grouped_confiavel = city_grouped
+        
+        if city_grouped_confiavel.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Nenhuma cidade com dados confiáveis para {fuel_type.value}"
+            )
+        
+        # 4. Encontrar melhor preço
+        best_idx = city_grouped_confiavel['PRECO_MEDIO_REVENDA'].idxmin()
+        best_row = city_grouped_confiavel.loc[best_idx]
         
         # Construir resposta
         result = {
             'price': float(best_row['PRECO_MEDIO_REVENDA']),
             'city': str(best_row['MUNICIPIO']),
-            'state': str(best_row['ESTADO_SIGLA']),
+            'state': str(best_row['ESTADO']),
             'region': str(best_row['REGIAO']),
             'fuel_type': fuel_type.value,
             'stations_count': int(best_row['NUMERO_DE_POSTOS_PESQUISADOS']),
-            'price_band': 'BAIXO'
+            'price_band': 'BAIXO',
+            'reliability': 'high' if best_row['NUMERO_DE_POSTOS_PESQUISADOS'] >= 10 else 'medium'
         }
         
         # Adicionar coordenadas
-        coords = processor._estimate_coordinates(best_row['MUNICIPIO'], best_row['ESTADO_SIGLA'])
+        coords = processor._estimate_coordinates(best_row['MUNICIPIO'], best_row['ESTADO'])
         result['latitude'] = coords['latitude']
         result['longitude'] = coords['longitude']
+        
+        logger.info(f"Melhor preço encontrado: {result['city']} - R${result['price']:.2f} ({result['stations_count']} postos)")
         
         return result
         
@@ -296,7 +326,7 @@ async def get_today_summary(
     try:
         processor = get_processor()
         
-        # **CORREÇÃO: Usar apenas dados da última semana**
+        # Usar apenas dados da última semana
         latest_data = processor.get_latest_week_data()
         
         if latest_data.empty:
@@ -305,142 +335,156 @@ async def get_today_summary(
                 detail="Nenhum dado da última semana disponível"
             )
         
-        # **CORREÇÃO: Obter data dos dados mais recentes**
+        # Obter data dos dados mais recentes
         latest_date = processor.get_latest_data_timestamp()
         
-        # DEBUG detalhado
         logger.info(f"DEBUG - Dados da última semana: {len(latest_data)} registros")
         logger.info(f"DEBUG - Data dos dados: {latest_date}")
-        logger.info(f"DEBUG - Colunas disponíveis: {list(latest_data.columns)}")
-        
-        # Verificar qual coluna de produto usar
-        product_column = None
-        possible_product_columns = ['PRODUTO_CONSOLIDADO', 'produto_consolidado', 'PRODUTO', 'produto']
-        
-        for col in possible_product_columns:
-            if col in latest_data.columns:
-                product_column = col
-                logger.info(f"DEBUG - Usando coluna de produto: {product_column}")
-                logger.info(f"DEBUG - Valores únicos: {latest_data[product_column].unique()[:5]}")
-                break
-        
-        if product_column is None:
-            logger.error(f"DEBUG - Coluna de produto não encontrada. Colunas: {list(latest_data.columns)}")
-            raise HTTPException(
-                status_code=500,
-                detail="Erro: coluna de produto não encontrada"
-            )
         
         # Filtrar por tipo de combustível
+        product_column = 'PRODUTO_CONSOLIDADO' if 'PRODUTO_CONSOLIDADO' in latest_data.columns else 'PRODUTO'
         fuel_df = latest_data[latest_data[product_column] == fuel_type.value.upper()]
         
         if fuel_df.empty:
-            logger.error(f"DEBUG - Nenhum dado para {fuel_type.value.upper()} na última semana")
-            logger.error(f"DEBUG - Valores disponíveis em {product_column}: {latest_data[product_column].unique()[:10]}")
             raise HTTPException(
                 status_code=404,
                 detail=f"Nenhum dado encontrado para {fuel_type.value} na última semana"
             )
         
-        # Encontrar coluna de preço
-        price_column = None
-        possible_price_columns = ['PRECO_MEDIO_REVENDA', 'preco_medio_revenda', 'PRECO MEDIO REVENDA', 'preco medio revenda']
+        logger.info(f"DEBUG - Total registros de {fuel_type.value}: {len(fuel_df)}")
         
-        for col in possible_price_columns:
-            if col in fuel_df.columns:
-                price_column = col
-                logger.info(f"DEBUG - Usando coluna de preço: {price_column}")
-                break
+        # **CONFIGURAÇÃO DE CONFIABILIDADE**
+        MIN_POSTOS_CONFIAVEL = 5  # Mínimo de postos por registro
+        MIN_POSTOS_POR_CIDADE = 10  # Mínimo de postos totais por cidade
         
-        if price_column is None:
-            logger.error(f"DEBUG - Coluna de preço não encontrada. Colunas: {list(fuel_df.columns)}")
-            raise HTTPException(
-                status_code=500,
-                detail="Erro na estrutura dos dados: coluna de preço não encontrada"
-            )
+        # 1. Filtrar registros com poucos postos
+        fuel_df_confiavel = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_CONFIAVEL].copy()
         
-        # Encontrar coluna de postos
-        stations_column = None
-        possible_stations_columns = ['NUMERO_DE_POSTOS_PESQUISADOS', 'numero_de_postos_pesquisados', 
-                                     'NUMERO DE POSTOS PESQUISADOS', 'numero de postos pesquisados']
+        if fuel_df_confiavel.empty:
+            logger.warning(f"Nenhum registro com pelo menos {MIN_POSTOS_CONFIAVEL} postos. Reduzindo para 3.")
+            MIN_POSTOS_CONFIAVEL = 3
+            fuel_df_confiavel = fuel_df[fuel_df['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_CONFIAVEL].copy()
         
-        for col in possible_stations_columns:
-            if col in fuel_df.columns:
-                stations_column = col
-                logger.info(f"DEBUG - Usando coluna de postos: {stations_column}")
-                break
+        if fuel_df_confiavel.empty:
+            logger.warning("Usando todos os dados (sem filtro de postos)")
+            fuel_df_confiavel = fuel_df.copy()
         
-        if stations_column is None:
-            stations_column = 'NUMERO_DE_POSTOS_PESQUISADOS'
-            logger.warning(f"DEBUG - Coluna de postos não encontrada, usando padrão")
+        logger.info(f"Dados confiáveis (≥{MIN_POSTOS_CONFIAVEL} postos): {len(fuel_df_confiavel)} registros")
         
-        # **CORREÇÃO: Encontrar melhor e pior preço na última semana**
-        if fuel_df.empty:
+        # 2. Agrupar por cidade
+        city_grouped = fuel_df_confiavel.groupby(['MUNICIPIO', 'ESTADO', 'REGIAO']).agg({
+            'PRECO_MEDIO_REVENDA': 'mean',  # Média entre GASOLINA COMUM e ADITIVADA
+            'PRECO_MINIMO_REVENDA': 'min',   # Menor preço mínimo
+            'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
+        }).reset_index()
+        
+        # 3. Filtrar cidades com poucos postos totais
+        city_grouped_confiavel = city_grouped[city_grouped['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_POR_CIDADE].copy()
+        
+        if city_grouped_confiavel.empty:
+            logger.warning(f"Nenhuma cidade com pelo menos {MIN_POSTOS_POR_CIDADE} postos. Reduzindo para 5.")
+            MIN_POSTOS_POR_CIDADE = 5
+            city_grouped_confiavel = city_grouped[city_grouped['NUMERO_DE_POSTOS_PESQUISADOS'] >= MIN_POSTOS_POR_CIDADE].copy()
+        
+        if city_grouped_confiavel.empty:
+            logger.warning("Usando todas as cidades (sem filtro de postos por cidade)")
+            city_grouped_confiavel = city_grouped.copy()
+        
+        logger.info(f"Cidades confiáveis (≥{MIN_POSTOS_POR_CIDADE} postos totais): {len(city_grouped_confiavel)} cidades")
+        
+        # **DEBUG: Mostrar top 5 cidades mais baratas**
+        logger.info("DEBUG - Top 5 cidades mais baratas (após filtros):")
+        top5 = city_grouped_confiavel.nsmallest(5, 'PRECO_MEDIO_REVENDA')
+        for _, row in top5.iterrows():
+            logger.info(f"  {row['MUNICIPIO']}, {row['ESTADO']}: R${row['PRECO_MEDIO_REVENDA']:.2f} ({row['NUMERO_DE_POSTOS_PESQUISADOS']} postos)")
+        
+        # 4. Encontrar MELHOR preço (menor preço médio em cidade confiável)
+        if city_grouped_confiavel.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"Nenhum dado encontrado para {fuel_type.value} na última semana"
+                detail=f"Nenhuma cidade com dados confiáveis para {fuel_type.value}"
             )
         
-        # Melhor preço (menor)
-        best_idx = fuel_df[price_column].idxmin()
-        best_row = fuel_df.loc[best_idx]
+        best_idx = city_grouped_confiavel['PRECO_MEDIO_REVENDA'].idxmin()
+        best_row = city_grouped_confiavel.loc[best_idx]
         
         best_price = {
-            'price': float(best_row[price_column]),
-            'city': str(best_row.get('MUNICIPIO', best_row.get('municipio', ''))),
-            'state': str(best_row.get('ESTADO', best_row.get('estado', ''))),
-            'region': str(best_row.get('REGIAO', best_row.get('regiao', ''))),
-            'stations_count': int(best_row.get(stations_column, 0)),
+            'price': float(best_row['PRECO_MEDIO_REVENDA']),
+            'city': str(best_row['MUNICIPIO']),
+            'state': str(best_row['ESTADO']),
+            'region': str(best_row['REGIAO']),
+            'stations_count': int(best_row['NUMERO_DE_POSTOS_PESQUISADOS']),
             'fuel_type': fuel_type.value,
-            'price_band': best_row.get('FAIXA_PRECO', 'MEDIO') if 'FAIXA_PRECO' in best_row else 'MEDIO'
+            'price_band': 'BAIXO',
+            'price_type': 'average',
+            'reliability': 'high' if best_row['NUMERO_DE_POSTOS_PESQUISADOS'] >= 10 else 'medium'
         }
         
-        # Pior preço (maior)
-        worst_idx = fuel_df[price_column].idxmax()
-        worst_row = fuel_df.loc[worst_idx]
+        # 5. Encontrar PIOR preço (maior preço médio)
+        worst_idx = city_grouped_confiavel['PRECO_MEDIO_REVENDA'].idxmax()
+        worst_row = city_grouped_confiavel.loc[worst_idx]
         
         worst_price = {
-            'price': float(worst_row[price_column]),
-            'city': str(worst_row.get('MUNICIPIO', worst_row.get('municipio', ''))),
-            'state': str(worst_row.get('ESTADO', worst_row.get('estado', ''))),
-            'region': str(worst_row.get('REGIAO', worst_row.get('regiao', ''))),
-            'stations_count': int(worst_row.get(stations_column, 0))
+            'price': float(worst_row['PRECO_MEDIO_REVENDA']),
+            'city': str(worst_row['MUNICIPIO']),
+            'state': str(worst_row['ESTADO']),
+            'region': str(worst_row['REGIAO']),
+            'stations_count': int(worst_row['NUMERO_DE_POSTOS_PESQUISADOS'])
         }
         
-        # Economia potencial
+        # 6. Economia potencial
         potential_saving = worst_price['price'] - best_price['price']
         
-        # **CORREÇÃO: Total de postos da última semana (sem duplicação por cidade-produto)**
-        # Evitar somar postos múltiplas vezes para mesma cidade e produto
-        if 'MUNICIPIO' in fuel_df.columns and 'PRODUTO_CONSOLIDADO' in fuel_df.columns:
-            # Agrupar por cidade e produto, pegar o máximo de postos (evita duplicação)
-            grouped_stations = fuel_df.groupby(['MUNICIPIO', 'PRODUTO_CONSOLIDADO'])[stations_column].max().reset_index()
-            total_stations = int(grouped_stations[stations_column].sum())
-            logger.info(f"DEBUG - Postos após agrupamento: {total_stations}")
-        else:
-            total_stations = int(fuel_df[stations_column].sum() if stations_column in fuel_df.columns else 0)
-            logger.info(f"DEBUG - Postos sem agrupamento: {total_stations}")
+        # 7. Total de postos analisados (apenas cidades confiáveis)
+        total_stations = int(city_grouped_confiavel['NUMERO_DE_POSTOS_PESQUISADOS'].sum())
         
-        # Média nacional da última semana
-        national_average = float(fuel_df[price_column].mean())
+        # 8. Média nacional (apenas cidades confiáveis)
+        national_average = float(city_grouped_confiavel['PRECO_MEDIO_REVENDA'].mean())
         
-        # **CORREÇÃO: Ranking usando apenas dados da última semana**
-        # Para o ranking, precisamos adaptar ou usar o ranking normal
-        # Por enquanto, usamos o método existente que ainda usa todos os dados
-        # Mais tarde podemos criar um método específico para última semana
-        ranking = processor.get_ranking(fuel_type.value, 10)
+        # 9. Ranking (top 10 cidades mais baratas confiáveis)
+        ranking_cities = city_grouped_confiavel.nsmallest(10, 'PRECO_MEDIO_REVENDA').reset_index()
+        
+        ranking = []
+        for i, row in ranking_cities.iterrows():
+            coords = processor._estimate_coordinates(row['MUNICIPIO'], row['ESTADO'])
+            
+            ranking.append({
+                'rank': i + 1,
+                'city': row['MUNICIPIO'],
+                'state': row['ESTADO'],
+                'region': processor._normalize_region(row['REGIAO']),
+                'price': float(row['PRECO_MEDIO_REVENDA']),
+                'stations': int(row['NUMERO_DE_POSTOS_PESQUISADOS']),
+                'latitude': coords['latitude'],
+                'longitude': coords['longitude'],
+                'reliability': 'high' if row['NUMERO_DE_POSTOS_PESQUISADOS'] >= 10 else 'medium'
+            })
+        
+        # 10. Estatísticas de confiabilidade
+        total_cities_analyzed = len(city_grouped_confiavel)
+        avg_postos_per_city = total_stations / total_cities_analyzed if total_cities_analyzed > 0 else 0
+        
+        logger.info(f"RESUMO: {total_cities_analyzed} cidades analisadas, {total_stations} postos totais")
+        logger.info(f"  Melhor preço: {best_price['city']} - R${best_price['price']:.2f}")
+        logger.info(f"  Pior preço: {worst_price['city']} - R${worst_price['price']:.2f}")
+        logger.info(f"  Média nacional: R${national_average:.2f}")
         
         return SummaryResponse(
             best_price=best_price,
             worst_price=worst_price,
             potential_saving=round(potential_saving, 3),
             total_stations=total_stations,
-            # **CORREÇÃO: Usar data dos dados, não data do processamento**
             analysis_date=latest_date if latest_date else datetime.now(),
             ranking=ranking,
             national_average=round(national_average, 3),
-            # Adicionar data dos dados para referência
-            data_date=latest_date
+            data_date=latest_date,
+            # Informações extras de confiabilidade
+            reliability_info={
+                'min_stations_per_record': MIN_POSTOS_CONFIAVEL,
+                'min_stations_per_city': MIN_POSTOS_POR_CIDADE,
+                'cities_analyzed': total_cities_analyzed,
+                'avg_stations_per_city': round(avg_postos_per_city, 1)
+            }
         )
         
     except HTTPException:
