@@ -891,28 +891,133 @@
             background: var(--color-danger-light);
         }
 
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            z-index: 1001;
+        }
+        
+        .menu-toggle span {
+            display: block;
+            height: 2px;
+            width: 100%;
+            background-color: var(--color-text-primary);
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-toggle.active span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+        
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .menu-toggle.active span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
+        }
+
+        
         /* Responsive */
         @media (max-width: 1024px) {
             .map-section {
                 grid-template-columns: 1fr;
             }
-
+        
             .simulator-grid {
                 grid-template-columns: 1fr;
             }
         }
-
+        
         @media (max-width: 768px) {
+            /* Menu hamburger visível em mobile */
+            .menu-toggle {
+                display: flex;
+            }
+            
+            /* Menu oculto por padrão, visível quando ativo */
             nav {
+                position: fixed;
+                top: 72px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--color-surface);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: center;
+                gap: var(--spacing-lg);
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+                padding: var(--spacing-xl);
+                padding-top: var(--spacing-2xl);
+                display: flex !important;
+                overflow-y: auto;
+                border-top: 1px solid var(--color-border);
+            }
+            
+            nav.active {
+                transform: translateX(0);
+            }
+            
+            nav a {
+                font-size: 16px;
+                padding: var(--spacing-lg) var(--spacing-xl);
+                width: 100%;
+                max-width: 300px;
+                text-align: center;
+                border-radius: var(--radius-md);
+                background: var(--color-neutral);
+                color: var(--color-text-primary);
+                border: 1px solid var(--color-border);
+            }
+            
+            nav a:hover {
+                background: var(--color-success-light);
+                border-color: var(--color-success);
+            }
+            
+            nav a.active {
+                background: var(--color-success);
+                color: white;
+                border-color: var(--color-success);
+            }
+            
+            nav a.active::after {
                 display: none;
             }
-
+            
+            /* Ajustes do conteúdo principal */
+            main {
+                padding-top: 72px;
+            }
+            
             .kpi-grid {
                 grid-template-columns: 1fr;
             }
-
+            
             .comparison-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            /* Ajuste do título principal */
+            h1 {
+                font-size: 28px !important;
+            }
+            
+            /* Ajuste do container do header para mobile */
+            header .container {
+                padding: 0 var(--spacing-md);
             }
         }
     </style>
@@ -922,7 +1027,15 @@
     <header>
         <div class="container">
             <div class="logo">FuelMetrics</div>
-            <nav>
+            
+            <!-- Botão hamburger para mobile -->
+            <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <nav id="mainNav">
                 <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
                 <a href="#" data-page="compare">Vale a pena desviar?</a>
                 <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
@@ -2257,6 +2370,9 @@
 
         // Inicialização da aplicação
         document.addEventListener('DOMContentLoaded', function() {
+            // Configurar menu mobile (hamburger)
+            setupMobileMenu();
+            
             // Configurar navegação
             setupNavigation();
             
@@ -2283,6 +2399,60 @@
                 }
             } catch (error) {
                 console.warn('API não disponível, usando dados locais');
+            }
+        }
+
+        // ============================================
+        // MENU HAMBURGER PARA MOBILE
+        // ============================================
+
+        function setupMobileMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const mainNav = document.getElementById('mainNav');
+            
+            if (menuToggle && mainNav) {
+                menuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menuToggle.classList.toggle('active');
+                    mainNav.classList.toggle('active');
+                    
+                    // Prevenir scroll do body quando menu está aberto
+                    if (mainNav.classList.contains('active')) {
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        document.body.style.overflow = '';
+                    }
+                });
+                
+                // Fechar menu ao clicar em um link
+                const navLinks = mainNav.querySelectorAll('a');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        menuToggle.classList.remove('active');
+                        mainNav.classList.remove('active');
+                        document.body.style.overflow = '';
+                    });
+                });
+                
+                // Fechar menu ao clicar fora
+                document.addEventListener('click', (e) => {
+                    if (mainNav.classList.contains('active') && 
+                        !mainNav.contains(e.target) && 
+                        !menuToggle.contains(e.target)) {
+                        menuToggle.classList.remove('active');
+                        mainNav.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
+                
+                // Fechar menu ao pressionar ESC
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && mainNav.classList.contains('active')) {
+                        menuToggle.classList.remove('active');
+                        mainNav.classList.remove('active');
+                        document.body.style.overflow = '';
+                    }
+                });
             }
         }
     </script>
