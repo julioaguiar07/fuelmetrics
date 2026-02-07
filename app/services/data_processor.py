@@ -195,11 +195,11 @@ class DataProcessor:
             logger.info(f"Produtos consolidados: {list(unique_consolidated)}")
             
             # Remover duplicatas (mantendo o menor preço)
-            self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
-            self.df = self.df.drop_duplicates(
-                subset=['MUNICIPIO', 'ESTADO', 'PRODUTO_CONSOLIDADO'],
-                keep='first'
-            )
+            # self.df = self.df.sort_values('PRECO_MEDIO_REVENDA')
+            # self.df = self.df.drop_duplicates(
+            #    subset=['MUNICIPIO', 'ESTADO', 'PRODUTO_CONSOLIDADO'],
+            #    keep='first'
+            # )
             
             final_count = len(self.df)
             logger.info(
