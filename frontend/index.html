@@ -890,12 +890,12 @@
             border-color: var(--color-danger);
             background: var(--color-danger-light);
         }
-
+   
         /* ============================================
-           MENU MOBILE - SOLUÇÃO SIMPLES
+           MENU MOBILE - ESTILO FULL SCREEN
            ============================================ */
         
-        /* Menu desktop (visível em telas grandes) */
+        /* Menu desktop */
         .desktop-nav {
             display: flex;
             gap: var(--spacing-xl);
@@ -912,7 +912,8 @@
             border: none;
             cursor: pointer;
             padding: 0;
-            z-index: 1001;
+            z-index: 10002; /* Fica acima do menu branco */
+            position: relative;
         }
         
         .menu-toggle span {
@@ -924,112 +925,100 @@
             transition: all 0.3s ease;
         }
         
-        .menu-toggle.active span:nth-child(1) {
-            transform: translateY(9px) rotate(45deg);
-        }
+        /* Animação do X */
+        .menu-toggle.active span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-toggle.active span:nth-child(2) { opacity: 0; }
+        .menu-toggle.active span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
         
-        .menu-toggle.active span:nth-child(2) {
-            opacity: 0;
-        }
-        
-        .menu-toggle.active span:nth-child(3) {
-            transform: translateY(-9px) rotate(-45deg);
-        }
-        
-        /* Menu mobile overlay (cobre tela toda) */
+        /* Overlay Tela Cheia Branco */
         .mobile-menu-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            z-index: 9999;
-            display: none;
+            width: 100%;
+            height: 100vh;
+            background: #FFFFFF;
+            z-index: 10001;
+            
+            /* Animação suave */
+            visibility: hidden;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transform: translateY(10px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            
+            /* Permitir rolagem se a tela for pequena */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .mobile-menu-overlay.active {
-            display: block;
+            visibility: visible;
             opacity: 1;
+            transform: translateY(0);
         }
         
         .mobile-menu-content {
-            position: relative;
-            height: 100%;
+            padding: 90px 24px 40px 24px; /* Padding top alto para não colar no topo */
+            min-height: 100%;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-2xl);
+            align-items: flex-start;
         }
         
-        /* Botão X para fechar */
-        .close-menu {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            font-size: 30px;
-            color: var(--color-text-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            z-index: 10000;
+        /* Título opcional 'Navegação' */
+        .menu-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--color-text-tertiary);
+            margin-bottom: 24px;
+            font-weight: 600;
         }
         
-        .close-menu:hover {
-            background: var(--color-danger);
-            color: white;
-            border-color: var(--color-danger);
-            transform: rotate(90deg);
-        }
-        
-        /* Links do menu mobile */
+        /* Links da Lista Vertical */
         .mobile-links {
             display: flex;
             flex-direction: column;
-            gap: var(--spacing-lg);
             width: 100%;
-            max-width: 400px;
         }
         
         .mobile-links a {
-            display: block;
-            padding: var(--spacing-xl) var(--spacing-2xl);
-            background: var(--color-surface);
-            border: 2px solid var(--color-border);
-            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 20px 0;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--color-border);
+            border-radius: 0;
+            box-shadow: none;
+            
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--color-text-primary);
             text-decoration: none;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-md);
+            text-align: left;
+            transition: color 0.2s ease, padding-left 0.2s ease;
         }
         
         .mobile-links a:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--color-success);
-            background: var(--color-success-light);
+            background: transparent;
+            color: var(--color-success);
+            padding-left: 10px;
+            transform: none;
+            box-shadow: none;
         }
         
         .mobile-links a.active {
-            background: var(--color-success);
-            color: white;
-            border-color: var(--color-success);
-            box-shadow: 0 8px 24px rgba(0, 168, 107, 0.3);
+            color: var(--color-success);
+            font-weight: 600;
+            background: transparent;
+            border-color: var(--color-border);
+            box-shadow: none;
         }
+        
+        /* Esconder o botão fechar antigo */
+        .close-menu { display: none !important; }
         
         /* ============================================
            RESPONSIVIDADE
@@ -1093,43 +1082,35 @@
 <body>
     <!-- Header -->
     <header>
-        <div class="container">
-            <div class="logo">FuelMetrics</div>
-            
-            <!-- Botão hamburger para mobile -->
-            <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            
-            <!-- Menu desktop (visível apenas em telas grandes) -->
-            <nav class="desktop-nav">
-                <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
-                <a href="#" data-page="compare">Vale a pena desviar?</a>
-                <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
-                <a href="#" data-page="simulator">Simulação de rota</a>
-            </nav>
-        </div>
-        
-        <!-- Menu mobile (overlay que cobre tela toda) -->
-        <div class="mobile-menu-overlay" id="mobileMenu">
-            <div class="mobile-menu-content">
-                <!-- Botão X para fechar -->
-                <button class="close-menu" id="closeMenu" aria-label="Fechar menu">
-                    <span>×</span>
+            <div class="container">
+                <div class="logo">FuelMetrics</div>
+                
+                <button class="menu-toggle" id="menuToggle" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </button>
                 
-                <!-- Links do menu -->
-                <div class="mobile-links">
+                <nav class="desktop-nav">
                     <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
                     <a href="#" data-page="compare">Vale a pena desviar?</a>
                     <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
                     <a href="#" data-page="simulator">Simulação de rota</a>
+                </nav>
+            </div>
+            
+            <div class="mobile-menu-overlay" id="mobileMenu">
+                <div class="mobile-menu-content">
+                    <div class="menu-label">Navegação</div>
+                    <div class="mobile-links">
+                        <a href="#" data-page="today" class="active">Onde abastecer hoje</a>
+                        <a href="#" data-page="compare">Vale a pena desviar?</a>
+                        <a href="#" data-page="trend">Abastecer agora ou esperar?</a>
+                        <a href="#" data-page="simulator">Simulação de rota</a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </header>
+        </header>
 
     <!-- Notification -->
     <div class="notification" id="notification"></div>
@@ -2478,84 +2459,68 @@
         function setupMobileMenu() {
             const menuToggle = document.getElementById('menuToggle');
             const mobileMenu = document.getElementById('mobileMenu');
-            const closeMenu = document.getElementById('closeMenu');
-            
-            if (menuToggle && mobileMenu && closeMenu) {
-                // Abrir menu ao clicar no hamburger
+            const mobileLinks = document.querySelectorAll('.mobile-links a');
+            const desktopLinks = document.querySelectorAll('.desktop-nav a');
+
+            if (menuToggle && mobileMenu) {
+                // Alternar menu ao clicar no hamburger
                 menuToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    mobileMenu.classList.add('active');
-                    document.body.style.overflow = 'hidden'; // Bloquear scroll
-                    menuToggle.classList.add('active');
+                    const isActive = mobileMenu.classList.contains('active');
+                    
+                    if (isActive) {
+                        // Fechar
+                        mobileMenu.classList.remove('active');
+                        menuToggle.classList.remove('active');
+                        document.body.style.overflow = ''; // Destravar rolagem
+                    } else {
+                        // Abrir
+                        mobileMenu.classList.add('active');
+                        menuToggle.classList.add('active');
+                        document.body.style.overflow = 'hidden'; // Travar rolagem do fundo
+                    }
                 });
-                
-                // Fechar menu ao clicar no X
-                closeMenu.addEventListener('click', () => {
-                    mobileMenu.classList.remove('active');
-                    document.body.style.overflow = ''; // Liberar scroll
-                    menuToggle.classList.remove('active');
-                });
-                
-                // Fechar menu ao clicar em um link do menu mobile
-                const mobileLinks = document.querySelectorAll('.mobile-links a');
+
+                // Fechar ao clicar em um link
                 mobileLinks.forEach(link => {
                     link.addEventListener('click', () => {
                         mobileMenu.classList.remove('active');
-                        document.body.style.overflow = '';
                         menuToggle.classList.remove('active');
+                        document.body.style.overflow = '';
                     });
                 });
-                
-                // Fechar menu ao clicar fora (no overlay)
-                mobileMenu.addEventListener('click', (e) => {
-                    if (e.target === mobileMenu) {
-                        mobileMenu.classList.remove('active');
-                        document.body.style.overflow = '';
-                        menuToggle.classList.remove('active');
-                    }
-                });
-                
-                // Fechar menu ao pressionar ESC
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
-                        mobileMenu.classList.remove('active');
-                        document.body.style.overflow = '';
-                        menuToggle.classList.remove('active');
-                    }
-                });
             }
-            
-            // Configurar navegação para ambos os menus (desktop e mobile)
-            const allNavLinks = document.querySelectorAll('.desktop-nav a, .mobile-links a');
+
+            // Lógica de navegação unificada (Desktop + Mobile)
+            const allNavLinks = [...mobileLinks, ...desktopLinks];
+
             allNavLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const pageId = link.getAttribute('data-page');
-                    
-                    // Atualizar navegação
-                    allNavLinks.forEach(l => l.classList.remove('active'));
+
+                    // 1. Atualizar visual dos links (active state)
+                    allNavLinks.forEach(l => {
+                        if (l.getAttribute('data-page') === pageId) {
+                            l.classList.add('active');
+                        } else {
+                            l.classList.remove('active');
+                        }
+                    });
+
+                    // 2. Trocar página visível
                     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                    
-                    link.classList.add('active');
                     document.getElementById(pageId).classList.add('active');
-                    
-                    // Carregar dados da página
+
+                    // 3. Carregar dados da página
                     setTimeout(() => {
                         switch(pageId) {
-                            case 'today':
-                                loadTodayPage();
-                                break;
-                            case 'compare':
-                                loadComparePage();
-                                break;
-                            case 'trend':
-                                loadTrendPage();
-                                break;
-                            case 'simulator':
-                                setupSimulatorPage();
-                                break;
+                            case 'today': loadTodayPage(); break;
+                            case 'compare': loadComparePage(); break;
+                            case 'trend': loadTrendPage(); break;
+                            case 'simulator': setupSimulatorPage(); break;
                         }
-                    }, 100);
+                    }, 50);
                 });
             });
         }
