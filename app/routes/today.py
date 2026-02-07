@@ -242,6 +242,15 @@ async def debug_simple_check():
         latest_data = processor.get_latest_week_data()
         latest_date = processor.get_latest_data_timestamp()
         
+        # **CORREÇÃO: Converter para date se necessário**
+        if latest_date:
+            if hasattr(latest_date, 'date'):
+                latest_date_str = str(latest_date.date())
+            else:
+                latest_date_str = str(latest_date)
+        else:
+            latest_date_str = "N/A"
+        
         # 2. Verificar gasolina
         gas_df = latest_data[latest_data['PRODUTO_CONSOLIDADO'] == 'GASOLINA']
         
@@ -267,7 +276,7 @@ async def debug_simple_check():
             top5 = []
         
         return {
-            "data_date": str(latest_date),
+            "data_date": latest_date_str,
             "today_date": str(datetime.now().date()),
             "records_in_latest_week": len(latest_data),
             "gasoline_records": len(gas_df),
@@ -276,7 +285,7 @@ async def debug_simple_check():
         }
         
     except Exception as e:
-        logger.error(f"Erro em /debug/simple-check: {e}")
+        logger.error(f"Erro em /debug/simple-check: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
