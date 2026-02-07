@@ -199,6 +199,20 @@ def normalize_city_name(city: str) -> str:
     # Remover acentos
     normalized = remove_accents(normalized)
     
+    # Correções específicas para cidades brasileiras
+    corrections = {
+        'SAO ': 'SÃO ',
+        'SAO$': 'SÃO',
+        ' JOAO ': ' JOÃO ',
+        '^JOAO ': 'JOÃO ',
+        ' JOSE ': ' JOSÉ ',
+        '^JOSE ': 'JOSÉ ',
+    }
+    
+    for wrong, correct in corrections.items():
+        if wrong in normalized or (wrong.endswith('$') and normalized.endswith(wrong[:-1])):
+            normalized = normalized.replace(wrong.replace('$', ''), correct.replace('$', ''))
+    
     # Remover espaços extras
     normalized = ' '.join(normalized.split())
     
