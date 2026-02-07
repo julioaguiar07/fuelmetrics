@@ -39,7 +39,7 @@ async def compare_cities(
         
         # USAR DADOS RECENTES
         from app.utils.column_helper import get_latest_data
-        df = get_latest_data(df)
+        # df = get_latest_data(df)
         
         # Usar helper para mapeamento correto
         col_map = get_column_mapping(df)
@@ -59,17 +59,19 @@ async def compare_cities(
         
         logger.info(f"DEBUG - Coluna município: {municipio_col}")
         logger.info(f"DEBUG - Coluna produto: {produto_col}")
+        logger.info(f"DEBUG - Coluna preço: {preco_col}")
         
-        # Verificar municípios disponíveis
-        available_cities = df[municipio_col].unique()
-        logger.info(f"DEBUG - Primeiros 20 municípios disponíveis: {available_cities[:20]}")
+        # Verificar todos os produtos disponíveis no dataset
+        if produto_col in df.columns:
+            all_products = df[produto_col].unique()
+            logger.info(f"DEBUG - Todos os produtos disponíveis no dataset: {all_products}")
         
         comparisons = []
         found_cities = []
         
         for city in city_list:
             city_upper = city.upper().strip()
-            logger.info(f"DEBUG - Buscando cidade: '{city}' -> '{city_upper}'")
+            logger.info(f"DEBUG ===== Buscando cidade: '{city}' -> '{city_upper}' =====")
             
             # BUSCAR CIDADE - Múltiplas estratégias
             city_data = None
@@ -98,29 +100,36 @@ async def compare_cities(
             
             if city_data is None or city_data.empty:
                 logger.warning(f"Cidade não encontrada: {city}")
-                logger.warning(f"Cidades similares disponíveis: {[c for c in available_cities if city_upper in str(c).upper()][:5]}")
                 continue
             
             found_cities.append(city_upper)
             logger.info(f"DEBUG - {city}: encontrados {len(city_data)} registros")
             
-            # Verificar combustíveis disponíveis
-            if produto_col in city_data.columns:
-                combustiveis_disponiveis = city_data[produto_col].unique()
-                logger.info(f"DEBUG - Combustíveis disponíveis para {city}: {combustiveis_disponiveis}")
-            else:
-                logger.error(f"Coluna {produto_col} não encontrada")
+            # Verificar se temos coluna de produto
+            if produto_col not in city_data.columns:
+                logger.error(f"DEBUG - Coluna {produto_col} não encontrada para {city}")
+                logger.error(f"DEBUG - Colunas disponíveis: {list(city_data.columns)}")
                 continue
             
-            # Filtrar por tipo de combustível
+            # Verificar TODOS os combustíveis disponíveis para esta cidade
+            combustiveis_disponiveis = city_data[produto_col].unique()
+            logger.info(f"DEBUG - Todos combustíveis disponíveis para {city}: {combustiveis_disponiveis}")
+            logger.info(f"DEBUG - Contagem por combustível:")
+            for produto in combustiveis_disponiveis:
+                count = len(city_data[city_data[produto_col] == produto])
+                logger.info(f"DEBUG -   {produto}: {count} registros")
+            
+            # Filtrar por tipo de combustível específico
             fuel_type_normalized = fuel_type.value.upper()
             if fuel_type.value == 'diesel_s10':
                 fuel_type_normalized = 'DIESEL_S10'
             
+            logger.info(f"DEBUG - Buscando combustível: {fuel_type_normalized}")
             fuel_data = city_data[city_data[produto_col] == fuel_type_normalized]
             
             # Se não encontrou, tentar variações para diesel
             if fuel_data.empty and fuel_type.value in ['diesel', 'diesel_s10']:
+                logger.info(f"DEBUG - Tentando variações para diesel...")
                 if fuel_type.value == 'diesel':
                     fuel_data = city_data[city_data[produto_col] == 'DIESEL']
                 elif fuel_type.value == 'diesel_s10':
@@ -130,6 +139,7 @@ async def compare_cities(
             
             if fuel_data.empty:
                 logger.warning(f"Nenhum dado de {fuel_type.value} para {city}")
+                # Verificar se temos algum dado de qualquer combustível
                 logger.warning(f"Combustíveis disponíveis: {combustiveis_disponiveis}")
                 continue
             
@@ -151,7 +161,7 @@ async def compare_cities(
                 else:
                     price_std = 0.0
                 
-                logger.info(f"DEBUG - {city}: preço médio: {avg_price}, estações: {total_stations}")
+                logger.info(f"DEBUG - {city}: preço médio: {avg_price}, estações: {total_stations}, registros: {len(fuel_data)}")
                 
                 # Obter estado e região
                 estado = ""
@@ -195,6 +205,21 @@ async def compare_cities(
             logger.error(f"Comparisons encontradas: {len(comparisons)}")
             logger.error(f"Cidades buscadas: {city_list}")
             logger.error(f"Cidades encontradas: {found_cities}")
+            
+            # Debug adicional: mostrar o que encontramos para cada cidade
+            for city in found_cities:
+                logger.error(f"DEBUG FINAL - Cidade {city}:")
+                # Verificar dados novamente para debug
+                city_data = df[df[municipio_col].astype(str).str.upper() == city]
+                if not city_data.empty:
+                    logger.error(f"DEBUG FINAL - Total registros: {len(city_data)}")
+                    if produto_col in city_data.columns:
+                        produtos = city_data[produto_col].unique()
+                        logger.error(f"DEBUG FINAL - Produtos: {produtos}")
+                        for produto in produtos:
+                            count = len(city_data[city_data[produto_col] == produto])
+                            logger.error(f"DEBUG FINAL -   {produto}: {count}")
+            
             raise HTTPException(
                 status_code=404,
                 detail=f"Dados insuficientes para comparação. Encontradas {len(comparisons)} cidades com dados para {fuel_type.value}."
