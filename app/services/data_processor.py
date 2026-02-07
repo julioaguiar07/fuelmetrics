@@ -260,7 +260,7 @@ class DataProcessor:
         text = re.sub(r'[^A-Z0-9\s]', '', text)
         
         return text.strip()
-    
+        
     def get_best_price_by_fuel(self, fuel_type: str):
         """Retorna melhor preço por tipo de combustível"""
         fuel_type_upper = fuel_type.upper()
@@ -300,8 +300,17 @@ class DataProcessor:
             'price_band': best['FAIXA_PRECO'] if 'FAIXA_PRECO' in best else 'MEDIO'
         }
         
-    def get_ranking(self, fuel_type: str, limit: int = 10):
+    def get_ranking(self, fuel_type: str, limit: int = 10, use_latest_week: bool = False):
         """Ranking dos municípios mais baratos"""
+        
+        # **CORREÇÃO: Escolher qual dataset usar**
+        if use_latest_week:
+            df_to_use = self.get_latest_week_data()
+            logger.info(f"Usando dados da última semana para ranking: {len(df_to_use)} registros")
+        else:
+            df_to_use = self.df
+            logger.info(f"Usando todos os dados para ranking: {len(df_to_use)} registros")
+        
         fuel_type_upper = fuel_type.upper()
         
         if fuel_type_upper == 'DIESEL_S10':
@@ -309,16 +318,28 @@ class DataProcessor:
         else:
             fuel_filter = fuel_type_upper
         
-        fuel_df = self.df[self.df['PRODUTO_CONSOLIDADO'] == fuel_filter]
+        fuel_df = df_to_use[df_to_use['PRODUTO_CONSOLIDADO'] == fuel_filter]
         
         if fuel_df.empty:
             return []
         
-        # Agrupar por município (média de preços se houver múltiplos registros)
-        grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
-            'PRECO_MEDIO_REVENDA': 'mean',
-            'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
-        }).reset_index()
+        # **CORREÇÃO IMPORTANTE: Agrupar por cidade e produto, pegar preço médio por cidade**
+        # Se uma cidade tem GASOLINA COMUM e GASOLINA ADITIVADA, precisamos de uma média ponderada
+        if use_latest_week:
+            # Para última semana, agrupar apenas por cidade
+            grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
+                'PRECO_MEDIO_REVENDA': 'mean',  # Média dos preços da cidade
+                'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'  # Soma dos postos
+            }).reset_index()
+        else:
+            # Para dados históricos, manter a lógica original
+            grouped = fuel_df.groupby(['MUNICIPIO', 'ESTADO_SIGLA', 'REGIAO']).agg({
+                'PRECO_MEDIO_REVENDA': 'mean',
+                'NUMERO_DE_POSTOS_PESQUISADOS': 'sum'
+            }).reset_index()
+        
+        # **IMPORTANTE: Remover cidades com menos de 5 postos para ranking confiável**
+        grouped = grouped[grouped['NUMERO_DE_POSTOS_PESQUISADOS'] >= 5]
         
         # Ordenar por preço
         grouped = grouped.sort_values('PRECO_MEDIO_REVENDA')
@@ -334,7 +355,7 @@ class DataProcessor:
                 'rank': i + 1,
                 'city': row['MUNICIPIO'],
                 'state': row['ESTADO_SIGLA'],
-                'region': self._normalize_region(row['REGIAO']),  # Normalizar região
+                'region': self._normalize_region(row['REGIAO']),
                 'price': float(row['PRECO_MEDIO_REVENDA']),
                 'stations': int(row['NUMERO_DE_POSTOS_PESQUISADOS']),
                 'latitude': coords['latitude'],
