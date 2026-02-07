@@ -150,6 +150,44 @@ def get_column_mapping(df: pd.DataFrame) -> dict:
     
     return mapping
 
+def normalize_product_name(product: str) -> str:
+    """Normaliza nome do produto para categorias consolidadas"""
+    if not isinstance(product, str):
+        return product
+    
+    product_upper = product.upper().strip()
+    
+    # Mapeamento de produtos
+    product_mapping = {
+        'OLEO DIESEL': 'DIESEL',
+        'ÓLEO DIESEL': 'DIESEL',
+        'DIESEL': 'DIESEL',
+        'OLEO DIESEL S10': 'DIESEL_S10',
+        'ÓLEO DIESEL S10': 'DIESEL_S10',
+        'DIESEL S10': 'DIESEL_S10',
+        'DIESEL_S10': 'DIESEL_S10',
+        'GASOLINA COMUM': 'GASOLINA',
+        'GASOLINA': 'GASOLINA',
+        'ETANOL HIDRATADO': 'ETANOL',
+        'ETANOL': 'ETANOL',
+        'GNV': 'GNV',
+        'GLP': 'GLP',
+    }
+    
+    # Verificar mapeamento exato primeiro
+    for key, value in product_mapping.items():
+        if key == product_upper:
+            return value
+    
+    # Verificar por contém
+    for key, value in product_mapping.items():
+        if key in product_upper or product_upper in key:
+            return value
+    
+    # Se não encontrou, retorna original
+    return product_upper
+
+
 def normalize_city_name(city: str) -> str:
     """Normaliza nome da cidade para busca"""
     if not isinstance(city, str):
