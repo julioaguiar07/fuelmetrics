@@ -363,16 +363,47 @@ class ANPDownloader:
             date_columns = ['DATA_INICIAL', 'DATA_FINAL']
             for col in date_columns:
                 if col in df.columns:
+                    # DEBUG: Mostrar antes
+                    logger.info(f"DEBUG - Primeiros valores de {col} antes: {df[col].head(3).tolist()}")
+                    
                     try:
-                        # Tentar converter para datetime
-                        df[col] = pd.to_datetime(df[col], errors='coerce')
-                    except Exception as e:
-                        logger.warning(f"Erro ao converter {col}: {e}")
-                        # Tentar formato específico dd/mm/yyyy
+                        # PRIMEIRO: Tentar formato brasileiro dd/mm/yyyy
+                        df[col] = pd.to_datetime(df[col], format='%d/%m/%Y', errors='coerce')
+                        logger.info(f"DEBUG - Convertido {col} com formato dd/mm/yyyy")
+                    except:
                         try:
-                            df[col] = pd.to_datetime(df[col], format='%d/%m/%Y', errors='coerce')
-                        except:
-                            logger.error(f"Não foi possível converter {col}")
+                            # SEGUNDO: Tentar formato ISO
+                            df[col] = pd.to_datetime(df[col], errors='coerce')
+                            logger.info(f"DEBUG - Convertido {col} com parser genérico")
+                        except Exception as e:
+                            logger.error(f"Falha ao converter {col}: {e}")
+                            # Tentativa final: extrair manualmente
+                            try:
+                                # Supor formato DD/MM/YYYY
+                                df[col] = df[col].astype(str).str.extract(r'(\d{1,2})/(\d{1,2})/(\d{4})')
+                                df[col] = pd.to_datetime(df[col], errors='coerce')
+                            except:
+                                logger.error(f"Não foi possível converter {col}")
+                    
+                    # DEBUG: Mostrar depois
+                    logger.info(f"DEBUG - Primeiros valores de {col} depois: {df[col].head(3).tolist()}")
+                    
+                    # **CORREÇÃO CRÍTICA: Verificar se datas estão futuras**
+                    if col == 'DATA_FINAL':
+                        today = pd.Timestamp.now().normalize()
+                        future_dates = df[df[col] > today]
+                        
+                        if len(future_dates) > 0:
+                            logger.warning(f"⚠️ ENCONTRADAS {len(future_dates)} DATAS FUTURAS em {col}!")
+                            logger.warning(f"Data mais recente: {df[col].max()}")
+                            logger.warning(f"Data de hoje: {today}")
+                            
+                            # **CORREÇÃO: Subtrair 7 dias se for futura**
+                            mask_future = df[col] > today
+                            df.loc[mask_future, col] = df.loc[mask_future, col] - pd.Timedelta(days=7)
+                            
+                            logger.info(f"✅ Datas futuras corrigidas (-7 dias)")
+                            logger.info(f"Data mais recente após correção: {df[col].max()}")
             
             # **CRÍTICO: Garantir que PRODUTO está em maiúsculas e limpo**
             if 'PRODUTO' in df.columns:
