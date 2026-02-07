@@ -171,7 +171,10 @@ class DataProcessor:
                 'DIESEL S500': 'DIESEL',
                 'GNV': 'GNV',
                 'GÁS NATURAL VEICULAR': 'GNV',
-                'GAS NATURAL VEICULAR': 'GNV'
+                'GAS NATURAL VEICULAR': 'GNV',
+                'GLP': 'GLP',  
+                'GÁS LIQUEFEITO DE PETRÓLEO': 'GLP',
+                'GAS LIQUEFEITO DE PETROLEO': 'GLP'
             }
             
             # Criar coluna produto_consolidado
