@@ -240,6 +240,36 @@
             height: 550px;
         }
 
+        /* ============================================
+           ESTILOS DO MAPA REALISTA
+           ============================================ */
+        #brazilMapContainer svg {
+            width: 100%;
+            height: 100%;
+            max-height: 550px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        /* Estilo padrão dos estados */
+        #brazilMapContainer path {
+            fill: #E8E8E8;       /* Cor base */
+            stroke: #FFFFFF;     /* Borda branca entre estados */
+            stroke-width: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* Efeito ao passar o mouse */
+        #brazilMapContainer path:hover {
+            filter: brightness(0.85); /* Escurece um pouco a cor da região */
+            stroke: #666;
+            stroke-width: 1.5px;
+            transform: translateY(-2px); /* Leve "pulo" */
+            z-index: 10;
+            position: relative;
+        }
+
+        
         .region {
             cursor: pointer;
             transition: all 0.2s ease;
@@ -1177,34 +1207,9 @@
                 <div class="map-section">
                     <div class="map-container">
                         <div class="map-title">Mapa de Preços por Região</div>
-                        <svg id="brazilMap" viewBox="0 0 800 800" style="border: 1px solid #e8e8e8; border-radius: 8px;">
-                            <!-- Norte - Forma mais realista -->
-                            <path class="region" data-region="NORTE" d="M180,80 L320,60 L380,120 L360,200 L320,240 L280,220 L240,260 L220,320 L180,340 L140,300 L120,240 L140,180 Z" 
-                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Norte"/>
-                            
-                            <!-- Nordeste - Forma mais realista -->
-                            <path class="region" data-region="NORDESTE" d="M380,120 L480,100 L580,140 L620,200 L600,280 L560,320 L520,340 L480,320 L440,360 L400,340 L360,300 L340,240 L380,200 Z" 
-                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Nordeste"/>
-                            
-                            <!-- Centro-Oeste - Forma mais realista -->
-                            <path class="region" data-region="CENTRO-OESTE" d="M280,220 L360,200 L400,240 L440,280 L480,320 L440,360 L400,400 L340,380 L300,340 L260,300 L240,260 Z" 
-                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Centro-Oeste"/>
-                            
-                            <!-- Sudeste - Forma mais realista -->
-                            <path class="region" data-region="SUDESTE" d="M440,280 L520,340 L560,320 L600,360 L580,400 L540,420 L500,440 L460,420 L420,380 L400,400 L360,380 L340,340 L400,300 Z" 
-                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sudeste"/>
-                            
-                            <!-- Sul - Forma mais realista -->
-                            <path class="region" data-region="SUL" d="M460,420 L500,440 L520,480 L500,520 L460,540 L420,520 L380,480 L400,440 Z" 
-                                  fill="#E8E8E8" stroke="#fff" stroke-width="2" title="Região Sul"/>
-                            
-                            <!-- Adicionar labels -->
-                            <text x="250" y="200" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORTE</text>
-                            <text x="450" y="220" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">NORDESTE</text>
-                            <text x="340" y="320" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">CENTRO-OESTE</text>
-                            <text x="480" y="380" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUDESTE</text>
-                            <text x="440" y="500" class="region-label" font-size="14" font-weight="bold" fill="#666" text-anchor="middle">SUL</text>
-                        </svg>
+                        <div id="brazilMapContainer" style="width: 100%; height: 550px; position: relative; display: flex; justify-content: center; align-items: center;">
+                            <div class="loading"></div>
+                        </div>
                         <div class="legend">
                             <span>Mais barato</span>
                             <div class="legend-gradient"></div>
@@ -1624,36 +1629,128 @@
             updateStatusElement.className = 'badge success';
         }
 
+        // ============================================
+        // LÓGICA DO MAPA REALISTA
+        // ============================================
+
+        // Mapeamento: Qual estado pertence a qual região?
+        const STATE_TO_REGION = {
+            'AC': 'NORTE', 'AM': 'NORTE', 'AP': 'NORTE', 'PA': 'NORTE', 'RO': 'NORTE', 'RR': 'NORTE', 'TO': 'NORTE',
+            'AL': 'NORDESTE', 'BA': 'NORDESTE', 'CE': 'NORDESTE', 'MA': 'NORDESTE', 'PB': 'NORDESTE', 'PE': 'NORDESTE', 'PI': 'NORDESTE', 'RN': 'NORDESTE', 'SE': 'NORDESTE',
+            'DF': 'CENTRO-OESTE', 'GO': 'CENTRO-OESTE', 'MT': 'CENTRO-OESTE', 'MS': 'CENTRO-OESTE',
+            'ES': 'SUDESTE', 'MG': 'SUDESTE', 'RJ': 'SUDESTE', 'SP': 'SUDESTE',
+            'PR': 'SUL', 'RS': 'SUL', 'SC': 'SUL'
+        };
+
+        // Cache do SVG para não baixar toda hora
+        let cachedMapSVG = null;
+
+        // Função principal chamada pelo app
         async function updateMapData() {
             try {
+                // 1. Garante que o mapa SVG está carregado na tela
+                await ensureMapLoaded();
+
+                // 2. Busca dados da API (Preços por Região)
                 const regionsData = await fetchAPI(`${API_ENDPOINTS.TODAY.REGIONS}?fuel_type=${appState.currentFuelType}`);
                 
-                if (!regionsData || !Array.isArray(regionsData)) {
-                    return;
-                }
-                
-                // Calcular escala de cores
+                if (!regionsData || !Array.isArray(regionsData)) return;
+
+                // 3. Calcula escala de cores (Gradient)
                 const prices = regionsData.map(r => r.avg_price);
                 const minPrice = Math.min(...prices);
                 const maxPrice = Math.max(...prices);
                 const priceRange = maxPrice - minPrice;
+
+                // Cria mapa de dados para acesso rápido: { "SUDESTE": {preco: 5.00}, ... }
+                const dataByRegion = {};
+                regionsData.forEach(d => dataByRegion[d.region] = d);
+
+                // 4. Pinta cada estado no mapa
+                const states = document.querySelectorAll('#brazilMapContainer path');
                 
-                // Atualizar cores das regiões
-                regionsData.forEach(regionData => {
-                    const regionElement = document.querySelector(`.region[data-region="${regionData.region}"]`);
-                    if (regionElement) {
-                        // Calcular cor baseada no preço
-                        const normalizedPrice = (regionData.avg_price - minPrice) / priceRange;
-                        const hue = (1 - normalizedPrice) * 120; // Verde (120) a Vermelho (0)
-                        regionElement.style.fill = `hsl(${hue}, 70%, 50%)`;
-                        regionElement.dataset.price = regionData.avg_price.toFixed(2);
-                        regionElement.dataset.stations = regionData.stations_count;
+                states.forEach(statePath => {
+                    // O SVG usa IDs como "BR-SP", removemos o "BR-" para pegar a sigla
+                    const id = statePath.getAttribute('id') || '';
+                    const uf = id.replace('BR-', '');
+                    const regionName = STATE_TO_REGION[uf];
+
+                    if (regionName && dataByRegion[regionName]) {
+                        const data = dataByRegion[regionName];
+                        
+                        // Cálculo da cor (Verde -> Vermelho)
+                        const normalized = (data.avg_price - minPrice) / (priceRange || 1); // Evita div por zero
+                        const hue = (1 - normalized) * 120; // 120=Verde, 0=Vermelho
+                        
+                        // Aplica cor
+                        statePath.style.fill = `hsl(${hue}, 70%, 50%)`;
+
+                        // Salva dados no elemento para o Tooltip usar depois
+                        statePath.dataset.uf = uf;
+                        statePath.dataset.region = regionName;
+                        statePath.dataset.price = data.avg_price;
+                        statePath.dataset.stations = data.stations_count;
                     }
                 });
-                
+
+                // 5. Configura o Tooltip
+                setupRealisticTooltip();
+
             } catch (error) {
                 console.error('Erro ao atualizar mapa:', error);
             }
+        }
+
+        // Carrega o SVG externo (Lucas Bassetti) se ainda não estiver na tela
+        async function ensureMapLoaded() {
+            const container = document.getElementById('brazilMapContainer');
+            if (container.querySelector('svg')) return; // Já carregado
+
+            if (!cachedMapSVG) {
+                // URL do SVG realista
+                const svgUrl = 'https://cdn.jsdelivr.net/gh/lucasbassetti/mapa-brasil-svg@master/mapa.svg';
+                const resp = await fetch(svgUrl);
+                cachedMapSVG = await resp.text();
+            }
+            container.innerHTML = cachedMapSVG;
+        }
+
+        // Configura eventos de mouse (Hover)
+        function setupRealisticTooltip() {
+            const tooltip = document.getElementById('mapTooltip');
+            const states = document.querySelectorAll('#brazilMapContainer path');
+
+            states.forEach(state => {
+                // Mouse Entra
+                state.addEventListener('mouseenter', (e) => {
+                    const uf = state.dataset.uf;
+                    const region = state.dataset.region;
+                    const price = state.dataset.price;
+                    const stations = state.dataset.stations;
+
+                    if (price) {
+                        tooltip.innerHTML = `
+                            <div style="text-align:left">
+                                <strong style="color:#fff; font-size:14px">${uf}</strong> <span style="font-size:11px; color:#ccc">(${region})</span><br>
+                                <div style="margin-top:4px; font-size:15px; font-weight:bold; color:var(--color-success)">${formatCurrency(parseFloat(price))}</div>
+                                <div style="font-size:11px; color:#aaa; margin-top:2px">${parseInt(stations).toLocaleString()} postos</div>
+                            </div>
+                        `;
+                        tooltip.classList.add('active');
+                    }
+                });
+
+                // Mouse Move (Tooltip segue o mouse)
+                state.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = (e.pageX + 15) + 'px';
+                    tooltip.style.top = (e.pageY + 15) + 'px';
+                });
+
+                // Mouse Sai
+                state.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('active');
+                });
+            });
         }
 
         function updateRankingList(ranking) {
