@@ -275,33 +275,56 @@ async def get_general_stats():
         processor = get_processor()
         df = processor.df
         
+        # Usar helper para mapeamento correto
+        col_map = get_column_mapping(df)
+        
+        # Verificar quais colunas temos disponíveis
+        municipio_col = col_map.get('municipio', 'MUNICIPIO')
+        estado_col = col_map.get('estado', 'ESTADO')
+        regiao_col = col_map.get('regiao', 'REGIAO')
+        produto_col = col_map.get('produto_consolidado', 'PRODUTO_CONSOLIDADO')
+        preco_col = col_map.get('preco_medio_revenda', 'PRECO_MEDIO_REVENDA')
+        postos_col = col_map.get('numero_de_postos_pesquisados', 'NUMERO_DE_POSTOS_PESQUISADOS')
+        
+        # Garantir que temos dados válidos
+        if df.empty:
+            raise HTTPException(
+                status_code=503,
+                detail="Nenhum dado disponível"
+            )
+        
         stats = {
             "total_records": len(df),
-            "total_municipalities": df['municipio'].nunique(),
-            "total_states": df['estado'].nunique(),
-            "total_fuel_types": df['produto_consolidado'].nunique(),  # MINÚSCULO
+            "total_municipalities": df[municipio_col].nunique() if municipio_col in df.columns else 0,
+            "total_states": df[estado_col].nunique() if estado_col in df.columns else 0,
+            "total_fuel_types": df[produto_col].nunique() if produto_col in df.columns else 0,
             "data_coverage": {
-                "norte": len(df[df['regiao'] == 'NORTE']),
-                "nordeste": len(df[df['regiao'] == 'NORDESTE']),
-                "centro_oeste": len(df[df['regiao'] == 'CENTRO_OESTE']),
-                "sudeste": len(df[df['regiao'] == 'SUDESTE']),
-                "sul": len(df[df['regiao'] == 'SUL'])
+                "norte": len(df[df[regiao_col].astype(str).str.contains('NORTE', case=False, na=False)]) if regiao_col in df.columns else 0,
+                "nordeste": len(df[df[regiao_col].astype(str).str.contains('NORDESTE', case=False, na=False)]) if regiao_col in df.columns else 0,
+                "centro_oeste": len(df[df[regiao_col].astype(str).str.contains('CENTRO.OESTE', case=False, na=False)]) if regiao_col in df.columns else 0,
+                "sudeste": len(df[df[regiao_col].astype(str).str.contains('SUDESTE', case=False, na=False)]) if regiao_col in df.columns else 0,
+                "sul": len(df[df[regiao_col].astype(str).str.contains('SUL', case=False, na=False)]) if regiao_col in df.columns else 0
             },
-            "price_range": {
-                "min": float(df['preco_medio_revenda'].min()),
-                "max": float(df['preco_medio_revenda'].max()),
-                "average": float(df['preco_medio_revenda'].mean()),
-                "median": float(df['preco_medio_revenda'].median())
-            },
-            "stations_analyzed": int(df['numero_de_postos_pesquisados'].sum()),
+            "stations_analyzed": int(df[postos_col].sum() if postos_col in df.columns else 0),
             "last_update": cache.get_timestamp().isoformat() if cache.get_timestamp() else None,
             "cache_status": "fresh" if not cache.should_refresh() else "stale"
         }
         
+        # Adicionar preços se disponíveis
+        if preco_col in df.columns:
+            stats["price_range"] = {
+                "min": float(df[preco_col].min()),
+                "max": float(df[preco_col].max()),
+                "average": float(df[preco_col].mean()),
+                "median": float(df[preco_col].median())
+            }
+        
         return stats
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Erro em /stats: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        logger.error(f"Erro em /stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/search")
 async def search_cities(
